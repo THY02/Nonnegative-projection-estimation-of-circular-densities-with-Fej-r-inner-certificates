@@ -1,0 +1,25 @@
+{
+  "seed": 20261104,
+  "repetitions": 40,
+  "folds": 5,
+  "rgrid": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    6,
+    8,
+    12
+  ],
+  "repair_ratios": [
+    2,
+    4,
+    8,
+    16
+  ],
+  "eta": 0.1,
+  "protocol_sha256": "2948020421045db695acd9412fa88a4b6e1780406b815c1e7019b9cb1ec170cc",
+  "script_sha256": "85c5b7c0262ee86c4cb76aea33586be169eed9fec096eb515a5fb6f85e21e177",
+  "scope": "Full SDP CV uses capped r<=12; candidate and grid repair share this cap."
+}

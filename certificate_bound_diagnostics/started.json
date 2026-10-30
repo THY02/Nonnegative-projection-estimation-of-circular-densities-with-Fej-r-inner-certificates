@@ -1,0 +1,10 @@
+{
+  "seed": 20261104,
+  "cases": 480,
+  "stage": "post-hoc replay of observed samples",
+  "protocol_sha256": "fdc5d3a89cd33ab00ab5b7de2c439a680224e3dc531e5ec2c0fbd92482ecf450",
+  "source_sha256": "eaa91a104e4567e39bec91ed0b5796db33196eba58a265ebfb5cdd343c9879b7",
+  "engine_sha256": "44f18620e3811ae1a98325d32634e2595c2b022c55ea6f5b12125d87925e83bb",
+  "prior_sha256": "7fcf3e68e3778f148dce819a4529f4eae66cdcab41d2012dc242d2f0e7c59320",
+  "ties": "absolute difference <= 1e-12 times larger bound"
+}

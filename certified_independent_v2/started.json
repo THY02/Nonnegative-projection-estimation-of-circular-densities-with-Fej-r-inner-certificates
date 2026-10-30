@@ -1,0 +1,62 @@
+{
+  "seed": 20261029,
+  "repetitions": 50,
+  "folds": 5,
+  "eta": 0.1,
+  "scenarios": [
+    "smooth",
+    "bimodal",
+    "narrow",
+    "boundary",
+    "uniform",
+    "zero_cardioid"
+  ],
+  "degrees": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    6,
+    8,
+    12,
+    16,
+    24,
+    32
+  ],
+  "fejer_degrees": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    6,
+    8,
+    12,
+    16,
+    24,
+    32,
+    48,
+    64,
+    96,
+    128
+  ],
+  "kappas": [
+    0.0,
+    0.5,
+    1.0,
+    2.0,
+    4.0,
+    8.0,
+    16.0,
+    32.0,
+    64.0,
+    128.0,
+    256.0
+  ],
+  "protocol_sha256": "477bcd2385764f96e799e7ad42029a3dad54a0f455385ac6813d861995ad2720",
+  "code_sha256": "d3d81aac26d8203da5f0d2938391319e2dea69194c6721c2e505ff800bc4681d",
+  "engine_sha256": "44f18620e3811ae1a98325d32634e2595c2b022c55ea6f5b12125d87925e83bb",
+  "date": "2026-10-27",
+  "stage": "Independent numerical validation; not proof of originality or acceptance."
+}

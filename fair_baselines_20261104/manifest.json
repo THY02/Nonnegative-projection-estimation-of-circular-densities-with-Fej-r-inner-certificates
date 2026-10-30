@@ -1,0 +1,41 @@
+{
+  "seed": 20261104,
+  "repetitions": 40,
+  "folds": 5,
+  "rgrid": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    6,
+    8,
+    12
+  ],
+  "repair_ratios": [
+    2,
+    4,
+    8,
+    16
+  ],
+  "eta": 0.1,
+  "protocol_sha256": "2948020421045db695acd9412fa88a4b6e1780406b815c1e7019b9cb1ec170cc",
+  "script_sha256": "85c5b7c0262ee86c4cb76aea33586be169eed9fec096eb515a5fb6f85e21e177",
+  "scope": "Full SDP CV uses capped r<=12; candidate and grid repair share this cap.",
+  "completed": true,
+  "sample_groups": 480,
+  "final_fits": 1440,
+  "candidate_scores": 21600,
+  "total_fits": 109440,
+  "failures": 0,
+  "sdp_calls": 19680,
+  "sdp_analytic": 4927,
+  "sdp_feasible_shortcut": 1963,
+  "sdp_status": {
+    "optimal": 12790
+  },
+  "sdp_max_psd_repair": 1.1346050887531982e-06,
+  "sdp_min_raw_eigenvalue": -7.290040696477236e-07,
+  "sdp_max_solver_residual": 9.995052742201004e-08,
+  "seconds": 297.8976455000229
+}

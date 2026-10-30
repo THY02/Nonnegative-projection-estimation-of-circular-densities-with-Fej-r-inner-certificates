@@ -1,0 +1,33 @@
+{
+  "protocol_sha256": "0f334e42461bbd94e850662ba68651396e8bf867c1d146c89f3edf40f7becd40",
+  "source_sha256": "7445f640dbfcf7a326e77bc64291549ab1576cd0a53aa619c0ae726e97afacb9",
+  "engine_sha256": "36cca26d77604101521781b75427f5a7d083fe985ddeaf5d8c2563c02f20fe14",
+  "old_data_sha256": "6c22e97ef498dfdece26c7910efa6301642ff8d57888a6d8b2b6da5ca782ea17",
+  "degree_candidates": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    7,
+    9,
+    11
+  ],
+  "error_tolerance": 1e-06,
+  "target": "Equal-day 24-hour share profiles, conditional on workingday, not exact trip times.",
+  "completed": true,
+  "test_days": 350,
+  "new_final_forecast_profiles": 48,
+  "new_tuning_fits": 432,
+  "min_weight": 1.4184083379856433e-14,
+  "max_selected_error_bound": 9.068195950832652e-07,
+  "max_stationarity": 2.289399167971978e-07,
+  "seconds": 2.8993396000005305,
+  "limitations": [
+    "Binned output error, not full continuous density error.",
+    "Tuning epsilon is computational, no iid day-risk claim.",
+    "Complete-day selection may be informative; no trip-level inference.",
+    "Old baseline methods loaded from prior result, matched on all test dates."
+  ]
+}
