@@ -1,0 +1,1776 @@
+% Quantitative tables snapshot (Tables 2--7 of the JKSS manuscript; labels tab:t1--tab:t6).
+% Synchronised directly from jkss_manuscript.tex.
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of related circular density estimation and nonnegative trigonometric approximation approaches}\label{tab:compare}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}Xccccc}
+\toprule
+Approach & Nonneg. & Zeros & No SDP & Risk theory & \(O(r/n)\) cert. \\
+\midrule
+Trig.\ density bases \citep{binette2022} & Yes & Via mixtures & Yes & Bayesian & No \\
+Fejér-poly.\ estimation \citep{klar2025} & Yes & Yes & Yes & Frequentist & No \\
+SDP trig.\ approx.\ (related; \citealp{siem2008}) & Yes & Yes & No & Not studied & No \\
+Grid bounds (adapted; \citealp{pfister2019}) & Yes & Yes & Yes & Not studied & No \\
+\textbf{Certified projection (this paper)} & \textbf{Yes*} & \textbf{Yes} & \textbf{Yes} & \textbf{Frequentist} & \textbf{Yes*} \\
+\bottomrule
+\end{tabularx}
+
+\vspace{0.3em}
+\footnotesize\textit{Note:} *Holds rigorously in exact arithmetic (Propositions~\ref{prop:classes} and~\ref{prop:certificate}); numerical implementation verifies feasibility and residuals in floating-point arithmetic. ``Zeros'' indicates whether the framework accommodates densities vanishing on the circle.
+\end{table}
+
+The remainder of the paper is organised as follows. Section~\ref{sec:model} introduces the certified projection model and stopping rule. Section~\ref{sec:risk} establishes fixed-degree, Sobolev, and cross-validation risk bounds. Section~\ref{sec:sim} presents simulation comparisons against full SDP, grid-repair, and direct Fejér kernel baselines. Section~\ref{sec:app} illustrates a computational extension to grouped hourly bike-sharing data, and Section~\ref{sec:discussion} concludes. The notation is summarised in Appendix~\ref{app:notation}.
+
+\section{Model and computable projection certificates}\label{sec:model}
+\subsection{Nonnegative densities and inner and outer approximations}
+Let \(X_1,\dots,X_n\) be independent and identically distributed continuous observations on the circle \([0,2\pi)\), such as directional measurements or periodic event times. To avoid both the negative values of truncated Fourier series and the first-order bias floor of direct Fejér kernel smoothing, we project the empirical Fourier coefficients onto the compact convex set of nonnegative trigonometric densities of degree \(r\) (the normalised slice of the nonnegative trigonometric polynomial cone with constant Fourier coefficient fixed at one). For an integer \(r\ge1\) and complex coefficients \(a_\ell\), define
+\begin{equation}
+f_z(\theta)=\frac1{2\pi}\left\{1+2\operatorname{Re}\sum_{\ell=1}^r a_\ell e^{i\ell\theta}\right\},\quad
+z=(\operatorname{Re}a_1,\ldots,\operatorname{Re}a_r,\operatorname{Im}a_1,\ldots,\operatorname{Im}a_r)^\top .
+\label{eq:density}
+\end{equation}
+Write \(q_z(\theta)=2\pi f_z(\theta)\) and let \(\mathcal K_r=\{z\in\mathbb R^{2r}: f_z(\theta)\ge0,\ 0\le\theta<2\pi\}\). Equation~\eqref{eq:density} integrates to one, so each element of \(\mathcal K_r\) defines a density. Its coefficients satisfy \(|a_\ell|\le1\), and \(\mathcal K_r\) is therefore compact and convex. Let \(\hat a_\ell=n^{-1}\sum_j e^{-i\ell X_j}\) be the empirical Fourier coefficients, and arrange their real and imaginary parts in the order in \eqref{eq:density} to form \(c\). The target projection is
+\begin{equation}
+z^*=\arg\min_{z\in\mathcal K_r}J(z),\qquad J(z)=\tfrac12\|z-c\|_2^2.
+\label{eq:projection}
+\end{equation}
+Take a representation degree \(D\ge r\), \(L=2D+1\) nodes \(\phi_k=2\pi k/L\), and \(t_\ell=1-\ell/(D+1)\). Write
+\begin{equation}
+(A_Iz)_k=2\operatorname{Re}\sum_{\ell=1}^r\frac{a_\ell}{t_\ell}e^{i\ell\phi_k},\qquad
+(A_Oz)_k=2\operatorname{Re}\sum_{\ell=1}^ra_\ell e^{i\ell\phi_k}.
+\label{eq:matrices}
+\end{equation}
+Define the inner class \(C_{r,D}=\{z:\mathbf1+A_Iz\ge0\}\) and the outer class \(O_{r,D}=\{z:\mathbf1+A_Oz\ge0\}\), with inequalities interpreted componentwise.
+
+\begin{proposition}\label{prop:classes}
+For every \(D\ge r\), \(C_{r,D}\subseteq\mathcal K_r\subseteq O_{r,D}\). The inner constraints are sufficient, but generally not necessary, for global nonnegativity.
+\end{proposition}
+\begin{proof}
+For \(z\in C_{r,D}\), set \(p_k=[1+(A_Iz)_k]/L\ge0\). Write \(d_0=1\), \(d_m=a_m/t_m\) and \(d_{-m}=\overline{a_m}/t_m\) for \(1\le m\le r\). For \(0\le\ell\le D\), orthogonality of roots of unity gives
+\[
+\sum_{k=0}^{L-1}p_ke^{-i\ell\phi_k}
+=\sum_{m=-r}^{r}d_m\left(\frac1L\sum_{k=0}^{L-1}e^{i(m-\ell)\phi_k}\right).
+\]
+Since \(|m-\ell|\le r+D\le2D<L\), the parenthesised term equals one only when \(m=\ell\), and zero otherwise. Thus \(\sum_kp_k=1\); for \(1\le\ell\le r\) the sum is \(a_\ell/t_\ell\), and for \(r<\ell\le D\) it is zero. The normalised Fejér kernel is
+\begin{equation}
+K_D(\theta)=\frac{1}{2\pi(D+1)}\left|\sum_{j=0}^De^{ij\theta}\right|^2,
+\label{eq:fejer}
+\end{equation}
+whose \(\ell\)th Fourier multiplier is \(t_\ell\). Hence \(f_z=\sum_k p_kK_D(\theta-\phi_k)\ge0\). Conversely, a function that is nonnegative everywhere is nonnegative at the nodes, so \(\mathcal K_r\subseteq O_{r,D}\).
+\end{proof}
+
+Geometrically, the inner-class construction rests on the triangular weights of a geometric square: for \(Q_\beta(1,z)=\sum_{j=0}^{D}(\beta z)^j\) with \(z=e^{i\theta}\) and \(\beta=e^{-i\phi}\), \(|Q_\beta(1,z)|^2/[2\pi(D+1)]\) is the shifted Fejér kernel in \eqref{eq:fejer}, whose multiplicities produce the multipliers \(t_\ell\). The output \(z_I\) is obtained as a numerical solution of \(\min_{z\in C_{r,D}}J(z)\); sampling the inverse-multiplier polynomial ensures global nonnegativity between nodes, whereas checking the original density only at the nodes does not.
+
+Existing grid certificates and our inner class are non-nested. For example, let \(r=1,D=8,L=17\) and \(q(\theta)=1-0.92\cos\theta\). The inverse-Fejér node value at \(\theta=0\) is \(1-0.92/(8/9)<0\), so the polynomial lies outside \(C_{r,D}\), whereas the grid bound of \citet{pfister2019} with \(C=(1-2/17)^{-1/2}\), node minimum \(B=0.08\), and maximum \(A\le1.92\) satisfies \((C+1)B-(C-1)A>0\). However, pairing our linear inner class with outer constraints and a dual lower bound yields an adaptive \(O(r/n)\) stopping certificate that avoids the sensitivity of fixed-grid bounds to the candidate \(D/r\) range (see Section~\ref{sec:sim}).
+
+\subsection{Error bounds and stopping rule}
+For any \(\lambda\ge0\), the dual function of the outer-constrained problem and its associated ball centre are
+\begin{equation}
+g(\lambda)=-\tfrac12\|A_O^\top\lambda\|^2-\lambda^\top(\mathbf1+A_Oc),\qquad v=c+A_O^\top\lambda.
+\label{eq:dual}
+\end{equation}
+Weak duality gives \(g(\lambda)\le\min_{O_{r,D}}J\le J(z^*)\). For any \(z_o\in O_{r,D}\), with coefficients \(b_\ell\), define
+\begin{equation}
+\begin{aligned}
+m_g &= \min_k\{1+(A_Oz_o)_k\}, & \beta &= \frac{\pi^2}{L^2}\sum_{\ell=1}^r \ell^2|b_\ell|,\\
+\delta &= \max(0,\beta-m_g), & z_R &= \frac{z_o}{1+\delta}.
+\end{aligned}
+\label{eq:repair}
+\end{equation}
+Outer feasibility gives \(m_g\ge0\) and \(0\le\delta\le\beta\). The node values are nonnegative and have discrete average one. Discrete orthogonality then gives \(|b_\ell|\le1\), whence
+\[
+\beta\le\frac{\pi^2 r(r+1)(2r+1)}{6(2D+1)^2}.
+\]
+For fixed \(r\), this bound decreases as \(O(D^{-2})\). If the outer point is near the boundary or the grid is coarse, the correction can make the ball bound loose. The direct gap bound does not use the corrected point; taking the minimum cannot be worse than using the direct bound alone.
+
+At a global minimiser \(\theta^*\), \(q'_{z_o}(\theta^*)=0\), and the nearest node is at distance at most \(\pi/L\). Since \(\|q_{z_o}''\|_\infty\le2\sum_{\ell=1}^r\ell^2|b_\ell|\), Taylor's theorem applied between the minimiser and its nearest node gives \(q_{z_o}(\theta^*)\ge m_g-\beta\), and hence \(z_R\in\mathcal K_r\). Let \(U_I=J(z_I)\) and \(U_R=J(z_R)\).
+
+\begin{proposition}\label{prop:certificate}
+If \(z_I\in C_{r,D}\), \(z_o\in O_{r,D}\), and \(\lambda\ge0\), then
+\begin{equation}
+\|f_{z_I}-f_{z^*}\|_{L^2}^2\le E_D
+=\frac1\pi\min\left\{2(U_I-g),\ \left[\|z_I-v\|+\sqrt{2(U_R-g)}\right]^2\right\}.
+\label{eq:certificate}
+\end{equation}
+\end{proposition}
+\begin{proof}
+The projection variational inequality gives \(J(z_I)-J(z^*)\ge\|z_I-z^*\|^2/2\); the first bound follows from \(g\le J(z^*)\). For any \(z\in\mathcal K_r\), completing the square yields \(J(z)\ge g+\|z-v\|^2/2\). Since \(J(z^*)\le U_R\), the point \(z^*\) lies in the ball centred at \(v\) with radius \(\sqrt{2(U_R-g)}\); the triangle inequality yields the second bound. Parseval's identity gives \(\|f_z-f_w\|_{L^2}^2=\|z-w\|^2/\pi\).
+\end{proof}
+
+The result applies to any feasible inner and outer points and any nonnegative multiplier; exact optimisation is unnecessary. For \(\eta>0\), the algorithm starts at \(D=2r\) and doubles \(D\) until \(E_D\le\eta r/(\pi n)\) (returning the uniform density for \(r=0\)). Because both classes approximate \(\mathcal K_r\) for fixed \(r\), the procedure terminates in finite steps under exact optimisation (even though the inner classes need not be nested across doublings).
+
+To keep the theoretical and numerical layers distinct, note that Proposition~\ref{prop:certificate} provides a rigorous \emph{theoretical certificate} in exact arithmetic. In our numerical implementation, we compute a floating-point evaluation of this certificate by solving the inner and outer quadratic programmes via SLSQP (capped at \(D\le256r\)) and recovering a nonnegative dual multiplier via nonnegative least squares on active constraints; node slack, stationarity residuals, and the stopping threshold are checked at each step, with small numerical violations repaired by shrinkage towards the uniform density (Appendix~\ref{app:numerical}). Rigorous machine-verifiable certification via interval arithmetic or outward rounding is left for future work.
+
+\section{Statistical risk and representation degree}\label{sec:risk}
+\subsection{Fixed-degree risk based on the a posteriori certificate}
+Let \(f\in L^2\) be the true circular density and let \(\mathcal F_r=\{f_z:z\in\mathcal K_r\}\). Expectations below are over independent and identically distributed observations, and \(r\) is fixed before observing the data.
+\begin{proposition}\label{prop:fixedrisk}
+Suppose \(\eta\ge0\) and the computation satisfies \(E_D\le\eta r/(\pi n)\) for every sample. Then, for every \(\epsilon>0\),
+\begin{equation}\label{eq:fixedrisk}
+\mathbb E\|f_{z_I}-f\|_2^2\le(1+\epsilon)\operatorname{dist}(f,\mathcal F_r)^2+
+\left[(1+\epsilon)+(1+\epsilon^{-1})\eta\right]\frac{r}{\pi n}.
+\end{equation}
+\end{proposition}
+\begin{proof}
+Let \(b\) be the vector of the first \(r\) true Fourier coefficients and \(e=c-b\) the empirical error. For any \(w\in\mathcal K_r\), set \(d=z^*-w\). The projection inequality and \(2e^\top d-\|d\|^2\le\|e\|^2\) give
+\[\|z^*-b\|^2\le\|w-b\|^2+\|e\|^2.\]
+Combining this with the Fourier tail and \(\mathbb E\|e\|^2=\sum_{\ell=1}^r(1-|a_\ell(f)|^2)/n\le r/n\), the risk of the full projection is at most \(\operatorname{dist}(f,\mathcal F_r)^2+r/(\pi n)\). The inequality \(\|u+v\|^2\le(1+\epsilon)\|u\|^2+(1+\epsilon^{-1})\|v\|^2\), together with the samplewise certificate, gives \eqref{eq:fixedrisk}.
+\end{proof}
+Equation~\eqref{eq:fixedrisk} permits \(D\) to be refined adaptively using the same data, because the certificate holds samplewise.
+
+\subsection{Densities with zeros and a fixed representation degree}
+Let \(a_\ell(f)=\int_0^{2\pi}e^{-i\ell\theta}f(\theta)d\theta\), and suppose that, for \(0<s\le2\),
+\begin{equation}\label{eq:sobolev}
+\sum_{\ell\ge1}\ell^{2s}|a_\ell(f)|^2\le R^2.
+\end{equation}
+A positive Jackson-type convolution constructed from the squared Fejér kernel yields \(g_r\in\mathcal F_r\) with \(\|f-g_r\|_2^2\le C_sR^2r^{-2s}\), for \(r\ge2\). This construction uses only \(f\ge0\) and requires no strictly positive lower bound. To distinguish data-dependent stopping from a prespecified representation degree, consider exact projection onto \(C_{r,D}\) with \(D\) fixed before sampling.
+\begin{proposition}\label{prop:sobolev}
+If \(r\ge2\), \(\eta>0\), and
+\begin{equation}\label{eq:degree}
+D\ge\max\left\{2r,\ r-1+\left\lceil r(r+1)\sqrt{2n/\eta}\right\rceil\right\},
+\end{equation}
+then the corresponding inner-class projection estimator satisfies
+\begin{equation}\label{eq:sobolevrisk}
+\mathbb E\|f_{z_I}-f\|_2^2\le2C_sR^2r^{-2s}+\frac{(1+\eta)r}{\pi n}.
+\end{equation}
+\end{proposition}
+\begin{proof}
+Let \(u=(2\pi)^{-1}\) and \(\alpha=r(r+1)/(D+1-r)\). For \(g\in\mathcal F_r\), write \(z_g\) for its coefficient vector. Since \(q_{z_g}(\phi_k)\ge0\) and \(|a_\ell(g)|\le1\), at each node
+\[
+\begin{aligned}
+1+(A_Iz_g)_k &\ge -2\sum_{\ell=1}^r\left(\frac1{t_\ell}-1\right)|a_\ell(g)|\\
+&=-2\sum_{\ell=1}^r\frac{\ell|a_\ell(g)|}{D+1-\ell}
+\ge-\frac{2}{D+1-r}\sum_{\ell=1}^r\ell|a_\ell(g)|\ge-\alpha.
+\end{aligned}
+\]
+Hence \((g+\alpha u)/(1+\alpha)\) belongs to the inner class. Denote this shrunken density by \(h\). Parseval's identity and \(|a_\ell(g)|\le1\) give
+\[
+\|h-g\|_2^2=\left(\frac{\alpha}{1+\alpha}\right)^2
+\frac1\pi\sum_{\ell=1}^{r}|a_\ell(g)|^2\le\frac{r\alpha^2}{\pi}.
+\]
+Using \((a+b)^2\le2a^2+2b^2\) with the \(g_r\) above gives
+\[\operatorname{dist}(f,C_{r,D})^2\le2C_sR^2r^{-2s}+2r\alpha^2/\pi.\]
+Equation~\eqref{eq:degree} implies \(\alpha^2\le\eta/(2n)\), so the second term is at most \(\eta r/(\pi n)\). Projection risk on a fixed closed convex inner class is at most this approximation error plus \(r/(\pi n)\), yielding \eqref{eq:sobolevrisk}. Here \(\operatorname{dist}(f,C_{r,D})\) denotes the \(L^2\) distance to the corresponding density class.
+\end{proof}
+When \(s\) is known and \(r\asymp n^{1/(2s+1)}\), \eqref{eq:sobolevrisk} attains the standard Sobolev minimax rate \(n^{-2s/(2s+1)}\), and the sufficient condition \eqref{eq:degree} depends only on \(r,n,\eta\) without estimating unknown \(s,R\). Note that Proposition~\ref{prop:sobolev} applies to exact projection onto \(C_{r,D}\) at a prespecified \(D\), whereas Proposition~\ref{prop:fixedrisk} governs the data-adaptive doubling rule at fixed \(r\). When \(r=1\) and \(f=(1-\cos\theta)/(2\pi)\), the inner constraint at \(\phi_0=0\) and a point attaining equality yield squared approximation error \(1/[4\pi(D+1)^2]\), which is at most \(\eta/(\pi n)\) if and only if \(D+1\ge\sqrt{n/(4\eta)}\), giving the exact representation scale for this vanishing density.
+
+For the \emph{a posteriori} certificate in Proposition~\ref{prop:certificate}, a uniform \emph{a priori} sufficient condition is \(D\ge2r\) and
+\begin{equation}\label{eq:uniformdegree}
+D+1-r\ge\frac{8nr(r+1)}\eta,\quad
+2D+1\ge\pi\sqrt{\frac{8n}{\eta}\frac{r(r+1)(2r+1)}6}.
+\end{equation}
+Under exact inner, outer, and dual solves, \eqref{eq:uniformdegree} guarantees that the direct gap bound is at most \(\eta r/(\pi n)\) (see Appendix~\ref{app:direct}). Because both the Sobolev fixed-inner-class sufficient degree \eqref{eq:degree} (scaling as \(O(\sqrt{n})\)) and the uniform direct-gap sufficient degree \eqref{eq:uniformdegree} (scaling as \(O(n)\)) are highly conservative, the sample-specific \emph{a posteriori} certificate in Proposition~\ref{prop:certificate} is essential in practice: in Section~\ref{sec:sim}, actual stopping degrees are typically over 70 times smaller than the Sobolev sufficient degree \eqref{eq:degree} (and smaller still relative to the \(O(n)\) direct-gap bound \eqref{eq:uniformdegree}).
+
+\subsection{Risk bound for penalised fold selection and model averaging}
+Data-dependent penalties and oracle analysis of cross-validation have been studied by \citet{lerasle2012} and \citet{arlot2016}. We give a sufficient bound for the present nonnegative candidate family that permits the penalty to adapt to training-fold density bounds. Partition the iid data in advance into \(K\ge2\) folds of equal size \(m=n/K\). Candidate degrees \(r_1,\ldots,r_J\) are prespecified. Let \(g_{k,j}\) be the nonnegative normalised density of degree at most \(r_j\) trained on all but fold \(k\). Set \(A_j=(r_j+1)/(2\pi)\), \(A_{\max}=\max_j A_j\), and \(t=\log(KJ^2n^2)\). If \(U_{k,j}\) depends only on the training data for fold \(k\) and satisfies \(\|g_{k,j}\|_\infty\le U_{k,j}\le A_j\), let \(\overline U_j=K^{-1}\sum_kU_{k,j}\). For validation loss \(\gamma_k(g)=\int g^2-2m^{-1}\sum_{i\in I_k}g(X_i)\), choose
+\begin{equation}\label{eq:selection}
+\hat j=\arg\min_j\left\{\frac1K\sum_{k=1}^K\gamma_k(g_{k,j})+\frac{2\overline U_jt}{3m}\right\},\qquad
+\overline g_{\hat j}=\frac1K\sum_{k=1}^K g_{k,\hat j}.
+\end{equation}
+\begin{proposition}\label{prop:oracle}
+If \(\|f\|_\infty\le B\), then for every \(0<\epsilon<1\),
+\begin{equation}\label{eq:oracle}
+\begin{aligned}
+\mathbb E\|\overline g_{\hat j}-f\|_2^2\le\min_j\bigg\{&
+\frac{1+\epsilon}{1-\epsilon}\frac1K\sum_{k=1}^K\mathbb E\|g_{k,j}-f\|_2^2\\
+&+\frac{4Bt}{\epsilon m(1-\epsilon)}+\frac{4t\,\mathbb E\overline U_j}{3m(1-\epsilon)}\bigg\}
++\frac{2(A_{\max}+B)}{n^2}.
+\end{aligned}
+\end{equation}
+\end{proposition}
+A computable training-fold bound uses the maximum on equally spaced nodes and a second-order remainder. Let \(q_{k,j}=2\pi g_{k,j}\); under our convention its \(\ell\)th Fourier coefficient is \(a_{k,j,\ell}=\int g_{k,j}(\theta)e^{-i\ell\theta}d\theta=(2\pi)^{-1}\int q_{k,j}(\theta)e^{-i\ell\theta}d\theta\). For a prespecified number of nodes \(M\), set
+\begin{equation}\label{eq:foldbound}
+U_{k,j}=\min\left\{A_j,\ \frac1{2\pi}\left[
+\max_{0\le h<M}q_{k,j}(2\pi h/M)+\frac{\pi^2}{M^2}\sum_{\ell=1}^{r_j}\ell^2|a_{k,j,\ell}|\right]\right\}.
+\end{equation}
+At a continuous maximum the first derivative vanishes and the nearest node is at distance at most \(\pi/M\); hence \eqref{eq:foldbound} is an upper bound in exact arithmetic. The coefficient \(2/3\) in \eqref{eq:selection} comes from the linear remainder in Bernstein's inequality in Appendix~\ref{app:oracle} and cancellation in the selection inequality. Taking \(U_{k,j}=A_j\) recovers the fixed-upper-bound method; \eqref{eq:foldbound} is at most \(A_j\), so the corresponding theoretical upper bound in \eqref{eq:oracle} does not increase. Equation~\eqref{eq:foldbound} holds for any prespecified positive integer \(M\); increasing \(M\) can reduce the second-order remainder for given coefficients at the cost of more node evaluations. The simulations use \(M=257\). The proof is in Appendix~\ref{app:oracle}.
+
+Fix \(K\ge2\), \(\eta>0\), \(0<\epsilon<1\), and let \(n_{\mathrm{tr}}=n-m\). Suppose that every fold candidate meets the samplewise certificate required for \eqref{eq:fixedrisk} at threshold \(\eta r_j/(\pi n_{\mathrm{tr}})\), and that \(f\) satisfies \eqref{eq:sobolev} with \(s\in(1/2,2]\). Equation~\eqref{eq:sobolev} and Cauchy--Schwarz imply \(\|f\|_\infty<\infty\). Taking a doubling candidate grid covering up to \(\lfloor\sqrt n\rfloor\) gives \(J=O(\log n)\) and \(t=O(\log n)\) for fixed \(K\). Combining \eqref{eq:fixedrisk}, Appendix~\ref{app:kernel}, and \(\overline U_j\le A_j=O(r_j+1)\) with \(r_j\asymp(n/\log n)^{1/(2s+1)}\) yields the adaptive risk rate \(O((\log n/n)^{2s/(2s+1)})\) while allowing zeros of \(f\).
+
+Because \(A_j\) bounds the worst-case supremum over all nonnegative densities of degree \(r_j\), the fixed-bound penalty is conservative in finite samples. Equation~\eqref{eq:foldbound} tightens this penalty using the fitted training-fold density while preserving the non-asymptotic oracle guarantee in Proposition~\ref{prop:oracle}. We emphasise that Proposition~\ref{prop:oracle} applies specifically to the fold-averaged estimator \(\overline g_{\hat j}\) (evaluated in Table~\ref{tab:t4}), whereas the main simulations in Tables~\ref{tab:t1} and~\ref{tab:t3} evaluate standard unpenalised five-fold selection followed by full-sample refitting, which is a distinct estimation procedure.
+
+\section{Simulation studies}\label{sec:sim}
+\subsection{Design}
+We use six density scenarios: the uniform distribution; the cardioid with a zero, \((1+\cos(\theta-0.7))/(2\pi)\); and four von Mises or mixture densities. Writing \((w,\mu,\kappa)\) for component weight, location and concentration, the smooth scenario is \((1,0.7,2)\), bimodal is \((0.6,0.5,4)+(0.4,3.4,7)\), narrow is \((1,0.73,20)\), and boundary-crossing is \((0.7,0.03,10)+(0.3,3.2,3)\). Sample sizes are \(n=100,500\), with 40 replications per cell and 480 samples in total. For each sample, the three methods share random five-fold splits, select their parameters independently by validation loss, and refit on the full sample.
+
+The direct Fejér kernel density estimator is \(\widehat f_d=n^{-1}\sum_{i=1}^{n}K_d(\theta-X_i)\), with \(\ell\)th coefficient \((1-\ell/(d+1))\hat a_\ell\) for \(1\le\ell\le d\). It constructs a density directly by averaging a nonnegative kernel, shrinking low-order empirical coefficients by positive multipliers. Our method instead projects empirical coefficients under nonnegativity constraints and uses inverse multipliers to construct a feasible inner class and an \emph{a posteriori} bound relative to the full projection, avoiding the first-order bias floor of direct kernel smoothing.
+
+The methods compared are: (1) the certified method, with \(\eta=0.1\) and \(D\) adjusted by \eqref{eq:certificate}; (2) grid repair, which projects on the outer grid, repairs by \eqref{eq:repair}, and independently selects \(D/r\in\{2,4,8,16\}\); and (3) the full nonnegative trigonometric-polynomial SDP projection. All three use candidate statistical degrees \(\{0,1,2,3,4,6,8,12\}\). The validation loss for each candidate is \(\int_{-\pi}^{\pi}\hat f(\theta)^2\,d\theta-2n_v^{-1}\sum_{j\in V}\hat f(X_j)\), weighted by validation-fold sample size. The true density is used only for final integrated squared error (ISE), not tuning. Simulation ISE is evaluated via Parseval's identity with true Fourier coefficients truncated at degree 256 (whose omitted Bessel-series tail is below \(10^{-500}\), well below machine precision and identical across methods). For \(r=0,1\), the SDP uses analytical solutions; otherwise it uses SCS or a feasibility shortcut, with numerical negative eigenvalues truncated and trace normalised.
+
+\subsection{Results}
+Table~\ref{tab:t1} reports the mean ISE (MISE) over 40 replications across all six scenarios (complete Monte Carlo standard errors are provided in the supplementary repository).
+
+\begin{table}[htbp]
+\centering
+\caption{Mean integrated squared error (MISE) by scenario over 40 replications, with Monte Carlo standard errors (MCSE) in parentheses}\label{tab:t1}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lrrrrr}
+\toprule
+Scenario & \(n\) & Certified (MCSE) & Grid repair & SDP & Cert \(-\) SDP (MCSE) \\
+\midrule
+Smooth & 100 & 0.010473 (0.001419) & 0.011988 & 0.010646 & \(-0.000173\) (0.000412) \\
+Smooth & 500 & 0.002893 (0.000410) & 0.003104 & 0.003084 & \(-0.000191\) (0.000094) \\
+Bimodal & 100 & 0.016432 (0.001874) & 0.016728 & 0.015587 & \(+0.000845\) (0.000782) \\
+Bimodal & 500 & 0.004930 (0.000408) & 0.004734 & 0.004726 & \(+0.000204\) (0.000149) \\
+Narrow & 100 & 0.033245 (0.003007) & 0.034185 & 0.034418 & \(-0.001173\) (0.001074) \\
+Narrow & 500 & 0.003908 (0.000557) & 0.003934 & 0.003849 & \(+0.000059\) (0.000048) \\
+Boundary-crossing & 100 & 0.023749 (0.002843) & 0.023262 & 0.023740 & \(+0.000009\) (0.000610) \\
+Boundary-crossing & 500 & 0.004732 (0.000425) & 0.004922 & 0.004775 & \(-0.000043\) (0.000065) \\
+Uniform & 100 & 0.005174 (0.001229) & 0.005927 & 0.005220 & \(-0.000046\) (0.000046) \\
+Uniform & 500 & 0.000330 (0.000112) & 0.000330 & 0.000330 & \(0.000000\) (0.000000) \\
+Cardioid with zero & 100 & 0.008861 (0.002495) & 0.007693 & 0.008326 & \(+0.000536\) (0.000846) \\
+Cardioid with zero & 500 & 0.001713 (0.000410) & 0.001611 & 0.001623 & \(+0.000090\) (0.000042) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of related circular density estimation and nonnegative trigonometric approximation approaches}\label{tab:compare}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}Xccccc}
+\toprule
+Approach & Nonneg. & Zeros & No SDP & Risk theory & \(O(r/n)\) cert. \\
+\midrule
+Trig.\ density bases \citep{binette2022} & Yes & Via mixtures & Yes & Bayesian & No \\
+Fejér-poly.\ estimation \citep{klar2025} & Yes & Yes & Yes & Frequentist & No \\
+SDP trig.\ approx.\ (related; \citealp{siem2008}) & Yes & Yes & No & Not studied & No \\
+Grid bounds (adapted; \citealp{pfister2019}) & Yes & Yes & Yes & Not studied & No \\
+\textbf{Certified projection (this paper)} & \textbf{Yes*} & \textbf{Yes} & \textbf{Yes} & \textbf{Frequentist} & \textbf{Yes*} \\
+\bottomrule
+\end{tabularx}
+
+\vspace{0.3em}
+\footnotesize\textit{Note:} *Holds rigorously in exact arithmetic (Propositions~\ref{prop:classes} and~\ref{prop:certificate}); numerical implementation verifies feasibility and residuals in floating-point arithmetic. ``Zeros'' indicates whether the framework accommodates densities vanishing on the circle.
+\end{table}
+
+The remainder of the paper is organised as follows. Section~\ref{sec:model} introduces the certified projection model and stopping rule. Section~\ref{sec:risk} establishes fixed-degree, Sobolev, and cross-validation risk bounds. Section~\ref{sec:sim} presents simulation comparisons against full SDP, grid-repair, and direct Fejér kernel baselines. Section~\ref{sec:app} illustrates a computational extension to grouped hourly bike-sharing data, and Section~\ref{sec:discussion} concludes. The notation is summarised in Appendix~\ref{app:notation}.
+
+\section{Model and computable projection certificates}\label{sec:model}
+\subsection{Nonnegative densities and inner and outer approximations}
+Let \(X_1,\dots,X_n\) be independent and identically distributed continuous observations on the circle \([0,2\pi)\), such as directional measurements or periodic event times. To avoid both the negative values of truncated Fourier series and the first-order bias floor of direct Fejér kernel smoothing, we project the empirical Fourier coefficients onto the compact convex set of nonnegative trigonometric densities of degree \(r\) (the normalised slice of the nonnegative trigonometric polynomial cone with constant Fourier coefficient fixed at one). For an integer \(r\ge1\) and complex coefficients \(a_\ell\), define
+\begin{equation}
+f_z(\theta)=\frac1{2\pi}\left\{1+2\operatorname{Re}\sum_{\ell=1}^r a_\ell e^{i\ell\theta}\right\},\quad
+z=(\operatorname{Re}a_1,\ldots,\operatorname{Re}a_r,\operatorname{Im}a_1,\ldots,\operatorname{Im}a_r)^\top .
+\label{eq:density}
+\end{equation}
+Write \(q_z(\theta)=2\pi f_z(\theta)\) and let \(\mathcal K_r=\{z\in\mathbb R^{2r}: f_z(\theta)\ge0,\ 0\le\theta<2\pi\}\). Equation~\eqref{eq:density} integrates to one, so each element of \(\mathcal K_r\) defines a density. Its coefficients satisfy \(|a_\ell|\le1\), and \(\mathcal K_r\) is therefore compact and convex. Let \(\hat a_\ell=n^{-1}\sum_j e^{-i\ell X_j}\) be the empirical Fourier coefficients, and arrange their real and imaginary parts in the order in \eqref{eq:density} to form \(c\). The target projection is
+\begin{equation}
+z^*=\arg\min_{z\in\mathcal K_r}J(z),\qquad J(z)=\tfrac12\|z-c\|_2^2.
+\label{eq:projection}
+\end{equation}
+Take a representation degree \(D\ge r\), \(L=2D+1\) nodes \(\phi_k=2\pi k/L\), and \(t_\ell=1-\ell/(D+1)\). Write
+\begin{equation}
+(A_Iz)_k=2\operatorname{Re}\sum_{\ell=1}^r\frac{a_\ell}{t_\ell}e^{i\ell\phi_k},\qquad
+(A_Oz)_k=2\operatorname{Re}\sum_{\ell=1}^ra_\ell e^{i\ell\phi_k}.
+\label{eq:matrices}
+\end{equation}
+Define the inner class \(C_{r,D}=\{z:\mathbf1+A_Iz\ge0\}\) and the outer class \(O_{r,D}=\{z:\mathbf1+A_Oz\ge0\}\), with inequalities interpreted componentwise.
+
+\begin{proposition}\label{prop:classes}
+For every \(D\ge r\), \(C_{r,D}\subseteq\mathcal K_r\subseteq O_{r,D}\). The inner constraints are sufficient, but generally not necessary, for global nonnegativity.
+\end{proposition}
+\begin{proof}
+For \(z\in C_{r,D}\), set \(p_k=[1+(A_Iz)_k]/L\ge0\). Write \(d_0=1\), \(d_m=a_m/t_m\) and \(d_{-m}=\overline{a_m}/t_m\) for \(1\le m\le r\). For \(0\le\ell\le D\), orthogonality of roots of unity gives
+\[
+\sum_{k=0}^{L-1}p_ke^{-i\ell\phi_k}
+=\sum_{m=-r}^{r}d_m\left(\frac1L\sum_{k=0}^{L-1}e^{i(m-\ell)\phi_k}\right).
+\]
+Since \(|m-\ell|\le r+D\le2D<L\), the parenthesised term equals one only when \(m=\ell\), and zero otherwise. Thus \(\sum_kp_k=1\); for \(1\le\ell\le r\) the sum is \(a_\ell/t_\ell\), and for \(r<\ell\le D\) it is zero. The normalised Fejér kernel is
+\begin{equation}
+K_D(\theta)=\frac{1}{2\pi(D+1)}\left|\sum_{j=0}^De^{ij\theta}\right|^2,
+\label{eq:fejer}
+\end{equation}
+whose \(\ell\)th Fourier multiplier is \(t_\ell\). Hence \(f_z=\sum_k p_kK_D(\theta-\phi_k)\ge0\). Conversely, a function that is nonnegative everywhere is nonnegative at the nodes, so \(\mathcal K_r\subseteq O_{r,D}\).
+\end{proof}
+
+Geometrically, the inner-class construction rests on the triangular weights of a geometric square: for \(Q_\beta(1,z)=\sum_{j=0}^{D}(\beta z)^j\) with \(z=e^{i\theta}\) and \(\beta=e^{-i\phi}\), \(|Q_\beta(1,z)|^2/[2\pi(D+1)]\) is the shifted Fejér kernel in \eqref{eq:fejer}, whose multiplicities produce the multipliers \(t_\ell\). The output \(z_I\) is obtained as a numerical solution of \(\min_{z\in C_{r,D}}J(z)\); sampling the inverse-multiplier polynomial ensures global nonnegativity between nodes, whereas checking the original density only at the nodes does not.
+
+Existing grid certificates and our inner class are non-nested. For example, let \(r=1,D=8,L=17\) and \(q(\theta)=1-0.92\cos\theta\). The inverse-Fejér node value at \(\theta=0\) is \(1-0.92/(8/9)<0\), so the polynomial lies outside \(C_{r,D}\), whereas the grid bound of \citet{pfister2019} with \(C=(1-2/17)^{-1/2}\), node minimum \(B=0.08\), and maximum \(A\le1.92\) satisfies \((C+1)B-(C-1)A>0\). However, pairing our linear inner class with outer constraints and a dual lower bound yields an adaptive \(O(r/n)\) stopping certificate that avoids the sensitivity of fixed-grid bounds to the candidate \(D/r\) range (see Section~\ref{sec:sim}).
+
+\subsection{Error bounds and stopping rule}
+For any \(\lambda\ge0\), the dual function of the outer-constrained problem and its associated ball centre are
+\begin{equation}
+g(\lambda)=-\tfrac12\|A_O^\top\lambda\|^2-\lambda^\top(\mathbf1+A_Oc),\qquad v=c+A_O^\top\lambda.
+\label{eq:dual}
+\end{equation}
+Weak duality gives \(g(\lambda)\le\min_{O_{r,D}}J\le J(z^*)\). For any \(z_o\in O_{r,D}\), with coefficients \(b_\ell\), define
+\begin{equation}
+\begin{aligned}
+m_g &= \min_k\{1+(A_Oz_o)_k\}, & \beta &= \frac{\pi^2}{L^2}\sum_{\ell=1}^r \ell^2|b_\ell|,\\
+\delta &= \max(0,\beta-m_g), & z_R &= \frac{z_o}{1+\delta}.
+\end{aligned}
+\label{eq:repair}
+\end{equation}
+Outer feasibility gives \(m_g\ge0\) and \(0\le\delta\le\beta\). The node values are nonnegative and have discrete average one. Discrete orthogonality then gives \(|b_\ell|\le1\), whence
+\[
+\beta\le\frac{\pi^2 r(r+1)(2r+1)}{6(2D+1)^2}.
+\]
+For fixed \(r\), this bound decreases as \(O(D^{-2})\). If the outer point is near the boundary or the grid is coarse, the correction can make the ball bound loose. The direct gap bound does not use the corrected point; taking the minimum cannot be worse than using the direct bound alone.
+
+At a global minimiser \(\theta^*\), \(q'_{z_o}(\theta^*)=0\), and the nearest node is at distance at most \(\pi/L\). Since \(\|q_{z_o}''\|_\infty\le2\sum_{\ell=1}^r\ell^2|b_\ell|\), Taylor's theorem applied between the minimiser and its nearest node gives \(q_{z_o}(\theta^*)\ge m_g-\beta\), and hence \(z_R\in\mathcal K_r\). Let \(U_I=J(z_I)\) and \(U_R=J(z_R)\).
+
+\begin{proposition}\label{prop:certificate}
+If \(z_I\in C_{r,D}\), \(z_o\in O_{r,D}\), and \(\lambda\ge0\), then
+\begin{equation}
+\|f_{z_I}-f_{z^*}\|_{L^2}^2\le E_D
+=\frac1\pi\min\left\{2(U_I-g),\ \left[\|z_I-v\|+\sqrt{2(U_R-g)}\right]^2\right\}.
+\label{eq:certificate}
+\end{equation}
+\end{proposition}
+\begin{proof}
+The projection variational inequality gives \(J(z_I)-J(z^*)\ge\|z_I-z^*\|^2/2\); the first bound follows from \(g\le J(z^*)\). For any \(z\in\mathcal K_r\), completing the square yields \(J(z)\ge g+\|z-v\|^2/2\). Since \(J(z^*)\le U_R\), the point \(z^*\) lies in the ball centred at \(v\) with radius \(\sqrt{2(U_R-g)}\); the triangle inequality yields the second bound. Parseval's identity gives \(\|f_z-f_w\|_{L^2}^2=\|z-w\|^2/\pi\).
+\end{proof}
+
+The result applies to any feasible inner and outer points and any nonnegative multiplier; exact optimisation is unnecessary. For \(\eta>0\), the algorithm starts at \(D=2r\) and doubles \(D\) until \(E_D\le\eta r/(\pi n)\) (returning the uniform density for \(r=0\)). Because both classes approximate \(\mathcal K_r\) for fixed \(r\), the procedure terminates in finite steps under exact optimisation (even though the inner classes need not be nested across doublings).
+
+To keep the theoretical and numerical layers distinct, note that Proposition~\ref{prop:certificate} provides a rigorous \emph{theoretical certificate} in exact arithmetic. In our numerical implementation, we compute a floating-point evaluation of this certificate by solving the inner and outer quadratic programmes via SLSQP (capped at \(D\le256r\)) and recovering a nonnegative dual multiplier via nonnegative least squares on active constraints; node slack, stationarity residuals, and the stopping threshold are checked at each step, with small numerical violations repaired by shrinkage towards the uniform density (Appendix~\ref{app:numerical}). Rigorous machine-verifiable certification via interval arithmetic or outward rounding is left for future work.
+
+\section{Statistical risk and representation degree}\label{sec:risk}
+\subsection{Fixed-degree risk based on the a posteriori certificate}
+Let \(f\in L^2\) be the true circular density and let \(\mathcal F_r=\{f_z:z\in\mathcal K_r\}\). Expectations below are over independent and identically distributed observations, and \(r\) is fixed before observing the data.
+\begin{proposition}\label{prop:fixedrisk}
+Suppose \(\eta\ge0\) and the computation satisfies \(E_D\le\eta r/(\pi n)\) for every sample. Then, for every \(\epsilon>0\),
+\begin{equation}\label{eq:fixedrisk}
+\mathbb E\|f_{z_I}-f\|_2^2\le(1+\epsilon)\operatorname{dist}(f,\mathcal F_r)^2+
+\left[(1+\epsilon)+(1+\epsilon^{-1})\eta\right]\frac{r}{\pi n}.
+\end{equation}
+\end{proposition}
+\begin{proof}
+Let \(b\) be the vector of the first \(r\) true Fourier coefficients and \(e=c-b\) the empirical error. For any \(w\in\mathcal K_r\), set \(d=z^*-w\). The projection inequality and \(2e^\top d-\|d\|^2\le\|e\|^2\) give
+\[\|z^*-b\|^2\le\|w-b\|^2+\|e\|^2.\]
+Combining this with the Fourier tail and \(\mathbb E\|e\|^2=\sum_{\ell=1}^r(1-|a_\ell(f)|^2)/n\le r/n\), the risk of the full projection is at most \(\operatorname{dist}(f,\mathcal F_r)^2+r/(\pi n)\). The inequality \(\|u+v\|^2\le(1+\epsilon)\|u\|^2+(1+\epsilon^{-1})\|v\|^2\), together with the samplewise certificate, gives \eqref{eq:fixedrisk}.
+\end{proof}
+Equation~\eqref{eq:fixedrisk} permits \(D\) to be refined adaptively using the same data, because the certificate holds samplewise.
+
+\subsection{Densities with zeros and a fixed representation degree}
+Let \(a_\ell(f)=\int_0^{2\pi}e^{-i\ell\theta}f(\theta)d\theta\), and suppose that, for \(0<s\le2\),
+\begin{equation}\label{eq:sobolev}
+\sum_{\ell\ge1}\ell^{2s}|a_\ell(f)|^2\le R^2.
+\end{equation}
+A positive Jackson-type convolution constructed from the squared Fejér kernel yields \(g_r\in\mathcal F_r\) with \(\|f-g_r\|_2^2\le C_sR^2r^{-2s}\), for \(r\ge2\). This construction uses only \(f\ge0\) and requires no strictly positive lower bound. To distinguish data-dependent stopping from a prespecified representation degree, consider exact projection onto \(C_{r,D}\) with \(D\) fixed before sampling.
+\begin{proposition}\label{prop:sobolev}
+If \(r\ge2\), \(\eta>0\), and
+\begin{equation}\label{eq:degree}
+D\ge\max\left\{2r,\ r-1+\left\lceil r(r+1)\sqrt{2n/\eta}\right\rceil\right\},
+\end{equation}
+then the corresponding inner-class projection estimator satisfies
+\begin{equation}\label{eq:sobolevrisk}
+\mathbb E\|f_{z_I}-f\|_2^2\le2C_sR^2r^{-2s}+\frac{(1+\eta)r}{\pi n}.
+\end{equation}
+\end{proposition}
+\begin{proof}
+Let \(u=(2\pi)^{-1}\) and \(\alpha=r(r+1)/(D+1-r)\). For \(g\in\mathcal F_r\), write \(z_g\) for its coefficient vector. Since \(q_{z_g}(\phi_k)\ge0\) and \(|a_\ell(g)|\le1\), at each node
+\[
+\begin{aligned}
+1+(A_Iz_g)_k &\ge -2\sum_{\ell=1}^r\left(\frac1{t_\ell}-1\right)|a_\ell(g)|\\
+&=-2\sum_{\ell=1}^r\frac{\ell|a_\ell(g)|}{D+1-\ell}
+\ge-\frac{2}{D+1-r}\sum_{\ell=1}^r\ell|a_\ell(g)|\ge-\alpha.
+\end{aligned}
+\]
+Hence \((g+\alpha u)/(1+\alpha)\) belongs to the inner class. Denote this shrunken density by \(h\). Parseval's identity and \(|a_\ell(g)|\le1\) give
+\[
+\|h-g\|_2^2=\left(\frac{\alpha}{1+\alpha}\right)^2
+\frac1\pi\sum_{\ell=1}^{r}|a_\ell(g)|^2\le\frac{r\alpha^2}{\pi}.
+\]
+Using \((a+b)^2\le2a^2+2b^2\) with the \(g_r\) above gives
+\[\operatorname{dist}(f,C_{r,D})^2\le2C_sR^2r^{-2s}+2r\alpha^2/\pi.\]
+Equation~\eqref{eq:degree} implies \(\alpha^2\le\eta/(2n)\), so the second term is at most \(\eta r/(\pi n)\). Projection risk on a fixed closed convex inner class is at most this approximation error plus \(r/(\pi n)\), yielding \eqref{eq:sobolevrisk}. Here \(\operatorname{dist}(f,C_{r,D})\) denotes the \(L^2\) distance to the corresponding density class.
+\end{proof}
+When \(s\) is known and \(r\asymp n^{1/(2s+1)}\), \eqref{eq:sobolevrisk} attains the standard Sobolev minimax rate \(n^{-2s/(2s+1)}\), and the sufficient condition \eqref{eq:degree} depends only on \(r,n,\eta\) without estimating unknown \(s,R\). Note that Proposition~\ref{prop:sobolev} applies to exact projection onto \(C_{r,D}\) at a prespecified \(D\), whereas Proposition~\ref{prop:fixedrisk} governs the data-adaptive doubling rule at fixed \(r\). When \(r=1\) and \(f=(1-\cos\theta)/(2\pi)\), the inner constraint at \(\phi_0=0\) and a point attaining equality yield squared approximation error \(1/[4\pi(D+1)^2]\), which is at most \(\eta/(\pi n)\) if and only if \(D+1\ge\sqrt{n/(4\eta)}\), giving the exact representation scale for this vanishing density.
+
+For the \emph{a posteriori} certificate in Proposition~\ref{prop:certificate}, a uniform \emph{a priori} sufficient condition is \(D\ge2r\) and
+\begin{equation}\label{eq:uniformdegree}
+D+1-r\ge\frac{8nr(r+1)}\eta,\quad
+2D+1\ge\pi\sqrt{\frac{8n}{\eta}\frac{r(r+1)(2r+1)}6}.
+\end{equation}
+Under exact inner, outer, and dual solves, \eqref{eq:uniformdegree} guarantees that the direct gap bound is at most \(\eta r/(\pi n)\) (see Appendix~\ref{app:direct}). Because both the Sobolev fixed-inner-class sufficient degree \eqref{eq:degree} (scaling as \(O(\sqrt{n})\)) and the uniform direct-gap sufficient degree \eqref{eq:uniformdegree} (scaling as \(O(n)\)) are highly conservative, the sample-specific \emph{a posteriori} certificate in Proposition~\ref{prop:certificate} is essential in practice: in Section~\ref{sec:sim}, actual stopping degrees are typically over 70 times smaller than the Sobolev sufficient degree \eqref{eq:degree} (and smaller still relative to the \(O(n)\) direct-gap bound \eqref{eq:uniformdegree}).
+
+\subsection{Risk bound for penalised fold selection and model averaging}
+Data-dependent penalties and oracle analysis of cross-validation have been studied by \citet{lerasle2012} and \citet{arlot2016}. We give a sufficient bound for the present nonnegative candidate family that permits the penalty to adapt to training-fold density bounds. Partition the iid data in advance into \(K\ge2\) folds of equal size \(m=n/K\). Candidate degrees \(r_1,\ldots,r_J\) are prespecified. Let \(g_{k,j}\) be the nonnegative normalised density of degree at most \(r_j\) trained on all but fold \(k\). Set \(A_j=(r_j+1)/(2\pi)\), \(A_{\max}=\max_j A_j\), and \(t=\log(KJ^2n^2)\). If \(U_{k,j}\) depends only on the training data for fold \(k\) and satisfies \(\|g_{k,j}\|_\infty\le U_{k,j}\le A_j\), let \(\overline U_j=K^{-1}\sum_kU_{k,j}\). For validation loss \(\gamma_k(g)=\int g^2-2m^{-1}\sum_{i\in I_k}g(X_i)\), choose
+\begin{equation}\label{eq:selection}
+\hat j=\arg\min_j\left\{\frac1K\sum_{k=1}^K\gamma_k(g_{k,j})+\frac{2\overline U_jt}{3m}\right\},\qquad
+\overline g_{\hat j}=\frac1K\sum_{k=1}^K g_{k,\hat j}.
+\end{equation}
+\begin{proposition}\label{prop:oracle}
+If \(\|f\|_\infty\le B\), then for every \(0<\epsilon<1\),
+\begin{equation}\label{eq:oracle}
+\begin{aligned}
+\mathbb E\|\overline g_{\hat j}-f\|_2^2\le\min_j\bigg\{&
+\frac{1+\epsilon}{1-\epsilon}\frac1K\sum_{k=1}^K\mathbb E\|g_{k,j}-f\|_2^2\\
+&+\frac{4Bt}{\epsilon m(1-\epsilon)}+\frac{4t\,\mathbb E\overline U_j}{3m(1-\epsilon)}\bigg\}
++\frac{2(A_{\max}+B)}{n^2}.
+\end{aligned}
+\end{equation}
+\end{proposition}
+A computable training-fold bound uses the maximum on equally spaced nodes and a second-order remainder. Let \(q_{k,j}=2\pi g_{k,j}\); under our convention its \(\ell\)th Fourier coefficient is \(a_{k,j,\ell}=\int g_{k,j}(\theta)e^{-i\ell\theta}d\theta=(2\pi)^{-1}\int q_{k,j}(\theta)e^{-i\ell\theta}d\theta\). For a prespecified number of nodes \(M\), set
+\begin{equation}\label{eq:foldbound}
+U_{k,j}=\min\left\{A_j,\ \frac1{2\pi}\left[
+\max_{0\le h<M}q_{k,j}(2\pi h/M)+\frac{\pi^2}{M^2}\sum_{\ell=1}^{r_j}\ell^2|a_{k,j,\ell}|\right]\right\}.
+\end{equation}
+At a continuous maximum the first derivative vanishes and the nearest node is at distance at most \(\pi/M\); hence \eqref{eq:foldbound} is an upper bound in exact arithmetic. The coefficient \(2/3\) in \eqref{eq:selection} comes from the linear remainder in Bernstein's inequality in Appendix~\ref{app:oracle} and cancellation in the selection inequality. Taking \(U_{k,j}=A_j\) recovers the fixed-upper-bound method; \eqref{eq:foldbound} is at most \(A_j\), so the corresponding theoretical upper bound in \eqref{eq:oracle} does not increase. Equation~\eqref{eq:foldbound} holds for any prespecified positive integer \(M\); increasing \(M\) can reduce the second-order remainder for given coefficients at the cost of more node evaluations. The simulations use \(M=257\). The proof is in Appendix~\ref{app:oracle}.
+
+Fix \(K\ge2\), \(\eta>0\), \(0<\epsilon<1\), and let \(n_{\mathrm{tr}}=n-m\). Suppose that every fold candidate meets the samplewise certificate required for \eqref{eq:fixedrisk} at threshold \(\eta r_j/(\pi n_{\mathrm{tr}})\), and that \(f\) satisfies \eqref{eq:sobolev} with \(s\in(1/2,2]\). Equation~\eqref{eq:sobolev} and Cauchy--Schwarz imply \(\|f\|_\infty<\infty\). Taking a doubling candidate grid covering up to \(\lfloor\sqrt n\rfloor\) gives \(J=O(\log n)\) and \(t=O(\log n)\) for fixed \(K\). Combining \eqref{eq:fixedrisk}, Appendix~\ref{app:kernel}, and \(\overline U_j\le A_j=O(r_j+1)\) with \(r_j\asymp(n/\log n)^{1/(2s+1)}\) yields the adaptive risk rate \(O((\log n/n)^{2s/(2s+1)})\) while allowing zeros of \(f\).
+
+Because \(A_j\) bounds the worst-case supremum over all nonnegative densities of degree \(r_j\), the fixed-bound penalty is conservative in finite samples. Equation~\eqref{eq:foldbound} tightens this penalty using the fitted training-fold density while preserving the non-asymptotic oracle guarantee in Proposition~\ref{prop:oracle}. We emphasise that Proposition~\ref{prop:oracle} applies specifically to the fold-averaged estimator \(\overline g_{\hat j}\) (evaluated in Table~\ref{tab:t4}), whereas the main simulations in Tables~\ref{tab:t1} and~\ref{tab:t3} evaluate standard unpenalised five-fold selection followed by full-sample refitting, which is a distinct estimation procedure.
+
+\section{Simulation studies}\label{sec:sim}
+\subsection{Design}
+We use six density scenarios: the uniform distribution; the cardioid with a zero, \((1+\cos(\theta-0.7))/(2\pi)\); and four von Mises or mixture densities. Writing \((w,\mu,\kappa)\) for component weight, location and concentration, the smooth scenario is \((1,0.7,2)\), bimodal is \((0.6,0.5,4)+(0.4,3.4,7)\), narrow is \((1,0.73,20)\), and boundary-crossing is \((0.7,0.03,10)+(0.3,3.2,3)\). Sample sizes are \(n=100,500\), with 40 replications per cell and 480 samples in total. For each sample, the three methods share random five-fold splits, select their parameters independently by validation loss, and refit on the full sample.
+
+The direct Fejér kernel density estimator is \(\widehat f_d=n^{-1}\sum_{i=1}^{n}K_d(\theta-X_i)\), with \(\ell\)th coefficient \((1-\ell/(d+1))\hat a_\ell\) for \(1\le\ell\le d\). It constructs a density directly by averaging a nonnegative kernel, shrinking low-order empirical coefficients by positive multipliers. Our method instead projects empirical coefficients under nonnegativity constraints and uses inverse multipliers to construct a feasible inner class and an \emph{a posteriori} bound relative to the full projection, avoiding the first-order bias floor of direct kernel smoothing.
+
+The methods compared are: (1) the certified method, with \(\eta=0.1\) and \(D\) adjusted by \eqref{eq:certificate}; (2) grid repair, which projects on the outer grid, repairs by \eqref{eq:repair}, and independently selects \(D/r\in\{2,4,8,16\}\); and (3) the full nonnegative trigonometric-polynomial SDP projection. All three use candidate statistical degrees \(\{0,1,2,3,4,6,8,12\}\). The validation loss for each candidate is \(\int_{-\pi}^{\pi}\hat f(\theta)^2\,d\theta-2n_v^{-1}\sum_{j\in V}\hat f(X_j)\), weighted by validation-fold sample size. The true density is used only for final integrated squared error (ISE), not tuning. Simulation ISE is evaluated via Parseval's identity with true Fourier coefficients truncated at degree 256 (whose omitted Bessel-series tail is below \(10^{-500}\), well below machine precision and identical across methods). For \(r=0,1\), the SDP uses analytical solutions; otherwise it uses SCS or a feasibility shortcut, with numerical negative eigenvalues truncated and trace normalised.
+
+\subsection{Results}
+Table~\ref{tab:t1} reports the mean ISE (MISE) over 40 replications across all six scenarios (complete Monte Carlo standard errors are provided in the supplementary repository).
+
+\begin{table}[htbp]
+\centering
+\caption{Mean integrated squared error (MISE) by scenario over 40 replications, with Monte Carlo standard errors (MCSE) in parentheses}\label{tab:t1}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lrrrrr}
+\toprule
+Scenario & \(n\) & Certified (MCSE) & Grid repair & SDP & Cert \(-\) SDP (MCSE) \\
+\midrule
+Smooth & 100 & 0.010473 (0.001419) & 0.011988 & 0.010646 & \(-0.000173\) (0.000412) \\
+Smooth & 500 & 0.002893 (0.000410) & 0.003104 & 0.003084 & \(-0.000191\) (0.000094) \\
+Bimodal & 100 & 0.016432 (0.001874) & 0.016728 & 0.015587 & \(+0.000845\) (0.000782) \\
+Bimodal & 500 & 0.004930 (0.000408) & 0.004734 & 0.004726 & \(+0.000204\) (0.000149) \\
+Narrow & 100 & 0.033245 (0.003007) & 0.034185 & 0.034418 & \(-0.001173\) (0.001074) \\
+Narrow & 500 & 0.003908 (0.000557) & 0.003934 & 0.003849 & \(+0.000059\) (0.000048) \\
+Boundary-crossing & 100 & 0.023749 (0.002843) & 0.023262 & 0.023740 & \(+0.000009\) (0.000610) \\
+Boundary-crossing & 500 & 0.004732 (0.000425) & 0.004922 & 0.004775 & \(-0.000043\) (0.000065) \\
+Uniform & 100 & 0.005174 (0.001229) & 0.005927 & 0.005220 & \(-0.000046\) (0.000046) \\
+Uniform & 500 & 0.000330 (0.000112) & 0.000330 & 0.000330 & \(0.000000\) (0.000000) \\
+Cardioid with zero & 100 & 0.008861 (0.002495) & 0.007693 & 0.008326 & \(+0.000536\) (0.000846) \\
+Cardioid with zero & 500 & 0.001713 (0.000410) & 0.001611 & 0.001623 & \(+0.000090\) (0.000042) \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[htbp]
+\centering
+\caption{Representation degree and smaller bound at stopping}\label{tab:t2}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lrrrrrr}
+\toprule
+Scenario & \(n\) & Fits & \(D/r\) median (Q1, Q3) & Direct & Ball & Tie \\
+\midrule
+Smooth & 100 & 40 & 8(4,10) & 67.5\% & 32.5\% & 0.0\% \\
+Smooth & 500 & 40 & 4(2,8) & 97.5\% & 2.5\% & 0.0\% \\
+Bimodal & 100 & 40 & 8(8,16) & 40.0\% & 60.0\% & 0.0\% \\
+Bimodal & 500 & 40 & 6(4,16) & 62.5\% & 37.5\% & 0.0\% \\
+Narrow & 100 & 40 & 12(8,32) & 62.5\% & 37.5\% & 0.0\% \\
+Narrow & 500 & 40 & 8(8,8) & 95.0\% & 5.0\% & 0.0\% \\
+Boundary & 100 & 40 & 8(4,8) & 75.0\% & 25.0\% & 0.0\% \\
+Boundary & 500 & 40 & 8(4,16) & 75.0\% & 25.0\% & 0.0\% \\
+Uniform & 100 & 16 & 2(2,2) & 6.2\% & 0.0\% & 93.8\% \\
+Uniform & 500 & 10 & 2(2,2) & 0.0\% & 0.0\% & 100.0\% \\
+Cardioid & 100 & 40 & 16(7,32) & 55.0\% & 45.0\% & 0.0\% \\
+Cardioid & 500 & 40 & 32(8,64) & 55.0\% & 42.5\% & 2.5\% \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.3em}
+\footnotesize\textit{Note:} Proportions are over nonzero-degree fits (excluding 54 zero-degree fits with no \(D/r\)); Q1 and Q3 use linear interpolation, and bounds are counted as tied when their difference is at most \(10^{-12}\) times the larger bound.
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of related circular density estimation and nonnegative trigonometric approximation approaches}\label{tab:compare}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}Xccccc}
+\toprule
+Approach & Nonneg. & Zeros & No SDP & Risk theory & \(O(r/n)\) cert. \\
+\midrule
+Trig.\ density bases \citep{binette2022} & Yes & Via mixtures & Yes & Bayesian & No \\
+Fejér-poly.\ estimation \citep{klar2025} & Yes & Yes & Yes & Frequentist & No \\
+SDP trig.\ approx.\ (related; \citealp{siem2008}) & Yes & Yes & No & Not studied & No \\
+Grid bounds (adapted; \citealp{pfister2019}) & Yes & Yes & Yes & Not studied & No \\
+\textbf{Certified projection (this paper)} & \textbf{Yes*} & \textbf{Yes} & \textbf{Yes} & \textbf{Frequentist} & \textbf{Yes*} \\
+\bottomrule
+\end{tabularx}
+
+\vspace{0.3em}
+\footnotesize\textit{Note:} *Holds rigorously in exact arithmetic (Propositions~\ref{prop:classes} and~\ref{prop:certificate}); numerical implementation verifies feasibility and residuals in floating-point arithmetic. ``Zeros'' indicates whether the framework accommodates densities vanishing on the circle.
+\end{table}
+
+The remainder of the paper is organised as follows. Section~\ref{sec:model} introduces the certified projection model and stopping rule. Section~\ref{sec:risk} establishes fixed-degree, Sobolev, and cross-validation risk bounds. Section~\ref{sec:sim} presents simulation comparisons against full SDP, grid-repair, and direct Fejér kernel baselines. Section~\ref{sec:app} illustrates a computational extension to grouped hourly bike-sharing data, and Section~\ref{sec:discussion} concludes. The notation is summarised in Appendix~\ref{app:notation}.
+
+\section{Model and computable projection certificates}\label{sec:model}
+\subsection{Nonnegative densities and inner and outer approximations}
+Let \(X_1,\dots,X_n\) be independent and identically distributed continuous observations on the circle \([0,2\pi)\), such as directional measurements or periodic event times. To avoid both the negative values of truncated Fourier series and the first-order bias floor of direct Fejér kernel smoothing, we project the empirical Fourier coefficients onto the compact convex set of nonnegative trigonometric densities of degree \(r\) (the normalised slice of the nonnegative trigonometric polynomial cone with constant Fourier coefficient fixed at one). For an integer \(r\ge1\) and complex coefficients \(a_\ell\), define
+\begin{equation}
+f_z(\theta)=\frac1{2\pi}\left\{1+2\operatorname{Re}\sum_{\ell=1}^r a_\ell e^{i\ell\theta}\right\},\quad
+z=(\operatorname{Re}a_1,\ldots,\operatorname{Re}a_r,\operatorname{Im}a_1,\ldots,\operatorname{Im}a_r)^\top .
+\label{eq:density}
+\end{equation}
+Write \(q_z(\theta)=2\pi f_z(\theta)\) and let \(\mathcal K_r=\{z\in\mathbb R^{2r}: f_z(\theta)\ge0,\ 0\le\theta<2\pi\}\). Equation~\eqref{eq:density} integrates to one, so each element of \(\mathcal K_r\) defines a density. Its coefficients satisfy \(|a_\ell|\le1\), and \(\mathcal K_r\) is therefore compact and convex. Let \(\hat a_\ell=n^{-1}\sum_j e^{-i\ell X_j}\) be the empirical Fourier coefficients, and arrange their real and imaginary parts in the order in \eqref{eq:density} to form \(c\). The target projection is
+\begin{equation}
+z^*=\arg\min_{z\in\mathcal K_r}J(z),\qquad J(z)=\tfrac12\|z-c\|_2^2.
+\label{eq:projection}
+\end{equation}
+Take a representation degree \(D\ge r\), \(L=2D+1\) nodes \(\phi_k=2\pi k/L\), and \(t_\ell=1-\ell/(D+1)\). Write
+\begin{equation}
+(A_Iz)_k=2\operatorname{Re}\sum_{\ell=1}^r\frac{a_\ell}{t_\ell}e^{i\ell\phi_k},\qquad
+(A_Oz)_k=2\operatorname{Re}\sum_{\ell=1}^ra_\ell e^{i\ell\phi_k}.
+\label{eq:matrices}
+\end{equation}
+Define the inner class \(C_{r,D}=\{z:\mathbf1+A_Iz\ge0\}\) and the outer class \(O_{r,D}=\{z:\mathbf1+A_Oz\ge0\}\), with inequalities interpreted componentwise.
+
+\begin{proposition}\label{prop:classes}
+For every \(D\ge r\), \(C_{r,D}\subseteq\mathcal K_r\subseteq O_{r,D}\). The inner constraints are sufficient, but generally not necessary, for global nonnegativity.
+\end{proposition}
+\begin{proof}
+For \(z\in C_{r,D}\), set \(p_k=[1+(A_Iz)_k]/L\ge0\). Write \(d_0=1\), \(d_m=a_m/t_m\) and \(d_{-m}=\overline{a_m}/t_m\) for \(1\le m\le r\). For \(0\le\ell\le D\), orthogonality of roots of unity gives
+\[
+\sum_{k=0}^{L-1}p_ke^{-i\ell\phi_k}
+=\sum_{m=-r}^{r}d_m\left(\frac1L\sum_{k=0}^{L-1}e^{i(m-\ell)\phi_k}\right).
+\]
+Since \(|m-\ell|\le r+D\le2D<L\), the parenthesised term equals one only when \(m=\ell\), and zero otherwise. Thus \(\sum_kp_k=1\); for \(1\le\ell\le r\) the sum is \(a_\ell/t_\ell\), and for \(r<\ell\le D\) it is zero. The normalised Fejér kernel is
+\begin{equation}
+K_D(\theta)=\frac{1}{2\pi(D+1)}\left|\sum_{j=0}^De^{ij\theta}\right|^2,
+\label{eq:fejer}
+\end{equation}
+whose \(\ell\)th Fourier multiplier is \(t_\ell\). Hence \(f_z=\sum_k p_kK_D(\theta-\phi_k)\ge0\). Conversely, a function that is nonnegative everywhere is nonnegative at the nodes, so \(\mathcal K_r\subseteq O_{r,D}\).
+\end{proof}
+
+Geometrically, the inner-class construction rests on the triangular weights of a geometric square: for \(Q_\beta(1,z)=\sum_{j=0}^{D}(\beta z)^j\) with \(z=e^{i\theta}\) and \(\beta=e^{-i\phi}\), \(|Q_\beta(1,z)|^2/[2\pi(D+1)]\) is the shifted Fejér kernel in \eqref{eq:fejer}, whose multiplicities produce the multipliers \(t_\ell\). The output \(z_I\) is obtained as a numerical solution of \(\min_{z\in C_{r,D}}J(z)\); sampling the inverse-multiplier polynomial ensures global nonnegativity between nodes, whereas checking the original density only at the nodes does not.
+
+Existing grid certificates and our inner class are non-nested. For example, let \(r=1,D=8,L=17\) and \(q(\theta)=1-0.92\cos\theta\). The inverse-Fejér node value at \(\theta=0\) is \(1-0.92/(8/9)<0\), so the polynomial lies outside \(C_{r,D}\), whereas the grid bound of \citet{pfister2019} with \(C=(1-2/17)^{-1/2}\), node minimum \(B=0.08\), and maximum \(A\le1.92\) satisfies \((C+1)B-(C-1)A>0\). However, pairing our linear inner class with outer constraints and a dual lower bound yields an adaptive \(O(r/n)\) stopping certificate that avoids the sensitivity of fixed-grid bounds to the candidate \(D/r\) range (see Section~\ref{sec:sim}).
+
+\subsection{Error bounds and stopping rule}
+For any \(\lambda\ge0\), the dual function of the outer-constrained problem and its associated ball centre are
+\begin{equation}
+g(\lambda)=-\tfrac12\|A_O^\top\lambda\|^2-\lambda^\top(\mathbf1+A_Oc),\qquad v=c+A_O^\top\lambda.
+\label{eq:dual}
+\end{equation}
+Weak duality gives \(g(\lambda)\le\min_{O_{r,D}}J\le J(z^*)\). For any \(z_o\in O_{r,D}\), with coefficients \(b_\ell\), define
+\begin{equation}
+\begin{aligned}
+m_g &= \min_k\{1+(A_Oz_o)_k\}, & \beta &= \frac{\pi^2}{L^2}\sum_{\ell=1}^r \ell^2|b_\ell|,\\
+\delta &= \max(0,\beta-m_g), & z_R &= \frac{z_o}{1+\delta}.
+\end{aligned}
+\label{eq:repair}
+\end{equation}
+Outer feasibility gives \(m_g\ge0\) and \(0\le\delta\le\beta\). The node values are nonnegative and have discrete average one. Discrete orthogonality then gives \(|b_\ell|\le1\), whence
+\[
+\beta\le\frac{\pi^2 r(r+1)(2r+1)}{6(2D+1)^2}.
+\]
+For fixed \(r\), this bound decreases as \(O(D^{-2})\). If the outer point is near the boundary or the grid is coarse, the correction can make the ball bound loose. The direct gap bound does not use the corrected point; taking the minimum cannot be worse than using the direct bound alone.
+
+At a global minimiser \(\theta^*\), \(q'_{z_o}(\theta^*)=0\), and the nearest node is at distance at most \(\pi/L\). Since \(\|q_{z_o}''\|_\infty\le2\sum_{\ell=1}^r\ell^2|b_\ell|\), Taylor's theorem applied between the minimiser and its nearest node gives \(q_{z_o}(\theta^*)\ge m_g-\beta\), and hence \(z_R\in\mathcal K_r\). Let \(U_I=J(z_I)\) and \(U_R=J(z_R)\).
+
+\begin{proposition}\label{prop:certificate}
+If \(z_I\in C_{r,D}\), \(z_o\in O_{r,D}\), and \(\lambda\ge0\), then
+\begin{equation}
+\|f_{z_I}-f_{z^*}\|_{L^2}^2\le E_D
+=\frac1\pi\min\left\{2(U_I-g),\ \left[\|z_I-v\|+\sqrt{2(U_R-g)}\right]^2\right\}.
+\label{eq:certificate}
+\end{equation}
+\end{proposition}
+\begin{proof}
+The projection variational inequality gives \(J(z_I)-J(z^*)\ge\|z_I-z^*\|^2/2\); the first bound follows from \(g\le J(z^*)\). For any \(z\in\mathcal K_r\), completing the square yields \(J(z)\ge g+\|z-v\|^2/2\). Since \(J(z^*)\le U_R\), the point \(z^*\) lies in the ball centred at \(v\) with radius \(\sqrt{2(U_R-g)}\); the triangle inequality yields the second bound. Parseval's identity gives \(\|f_z-f_w\|_{L^2}^2=\|z-w\|^2/\pi\).
+\end{proof}
+
+The result applies to any feasible inner and outer points and any nonnegative multiplier; exact optimisation is unnecessary. For \(\eta>0\), the algorithm starts at \(D=2r\) and doubles \(D\) until \(E_D\le\eta r/(\pi n)\) (returning the uniform density for \(r=0\)). Because both classes approximate \(\mathcal K_r\) for fixed \(r\), the procedure terminates in finite steps under exact optimisation (even though the inner classes need not be nested across doublings).
+
+To keep the theoretical and numerical layers distinct, note that Proposition~\ref{prop:certificate} provides a rigorous \emph{theoretical certificate} in exact arithmetic. In our numerical implementation, we compute a floating-point evaluation of this certificate by solving the inner and outer quadratic programmes via SLSQP (capped at \(D\le256r\)) and recovering a nonnegative dual multiplier via nonnegative least squares on active constraints; node slack, stationarity residuals, and the stopping threshold are checked at each step, with small numerical violations repaired by shrinkage towards the uniform density (Appendix~\ref{app:numerical}). Rigorous machine-verifiable certification via interval arithmetic or outward rounding is left for future work.
+
+\section{Statistical risk and representation degree}\label{sec:risk}
+\subsection{Fixed-degree risk based on the a posteriori certificate}
+Let \(f\in L^2\) be the true circular density and let \(\mathcal F_r=\{f_z:z\in\mathcal K_r\}\). Expectations below are over independent and identically distributed observations, and \(r\) is fixed before observing the data.
+\begin{proposition}\label{prop:fixedrisk}
+Suppose \(\eta\ge0\) and the computation satisfies \(E_D\le\eta r/(\pi n)\) for every sample. Then, for every \(\epsilon>0\),
+\begin{equation}\label{eq:fixedrisk}
+\mathbb E\|f_{z_I}-f\|_2^2\le(1+\epsilon)\operatorname{dist}(f,\mathcal F_r)^2+
+\left[(1+\epsilon)+(1+\epsilon^{-1})\eta\right]\frac{r}{\pi n}.
+\end{equation}
+\end{proposition}
+\begin{proof}
+Let \(b\) be the vector of the first \(r\) true Fourier coefficients and \(e=c-b\) the empirical error. For any \(w\in\mathcal K_r\), set \(d=z^*-w\). The projection inequality and \(2e^\top d-\|d\|^2\le\|e\|^2\) give
+\[\|z^*-b\|^2\le\|w-b\|^2+\|e\|^2.\]
+Combining this with the Fourier tail and \(\mathbb E\|e\|^2=\sum_{\ell=1}^r(1-|a_\ell(f)|^2)/n\le r/n\), the risk of the full projection is at most \(\operatorname{dist}(f,\mathcal F_r)^2+r/(\pi n)\). The inequality \(\|u+v\|^2\le(1+\epsilon)\|u\|^2+(1+\epsilon^{-1})\|v\|^2\), together with the samplewise certificate, gives \eqref{eq:fixedrisk}.
+\end{proof}
+Equation~\eqref{eq:fixedrisk} permits \(D\) to be refined adaptively using the same data, because the certificate holds samplewise.
+
+\subsection{Densities with zeros and a fixed representation degree}
+Let \(a_\ell(f)=\int_0^{2\pi}e^{-i\ell\theta}f(\theta)d\theta\), and suppose that, for \(0<s\le2\),
+\begin{equation}\label{eq:sobolev}
+\sum_{\ell\ge1}\ell^{2s}|a_\ell(f)|^2\le R^2.
+\end{equation}
+A positive Jackson-type convolution constructed from the squared Fejér kernel yields \(g_r\in\mathcal F_r\) with \(\|f-g_r\|_2^2\le C_sR^2r^{-2s}\), for \(r\ge2\). This construction uses only \(f\ge0\) and requires no strictly positive lower bound. To distinguish data-dependent stopping from a prespecified representation degree, consider exact projection onto \(C_{r,D}\) with \(D\) fixed before sampling.
+\begin{proposition}\label{prop:sobolev}
+If \(r\ge2\), \(\eta>0\), and
+\begin{equation}\label{eq:degree}
+D\ge\max\left\{2r,\ r-1+\left\lceil r(r+1)\sqrt{2n/\eta}\right\rceil\right\},
+\end{equation}
+then the corresponding inner-class projection estimator satisfies
+\begin{equation}\label{eq:sobolevrisk}
+\mathbb E\|f_{z_I}-f\|_2^2\le2C_sR^2r^{-2s}+\frac{(1+\eta)r}{\pi n}.
+\end{equation}
+\end{proposition}
+\begin{proof}
+Let \(u=(2\pi)^{-1}\) and \(\alpha=r(r+1)/(D+1-r)\). For \(g\in\mathcal F_r\), write \(z_g\) for its coefficient vector. Since \(q_{z_g}(\phi_k)\ge0\) and \(|a_\ell(g)|\le1\), at each node
+\[
+\begin{aligned}
+1+(A_Iz_g)_k &\ge -2\sum_{\ell=1}^r\left(\frac1{t_\ell}-1\right)|a_\ell(g)|\\
+&=-2\sum_{\ell=1}^r\frac{\ell|a_\ell(g)|}{D+1-\ell}
+\ge-\frac{2}{D+1-r}\sum_{\ell=1}^r\ell|a_\ell(g)|\ge-\alpha.
+\end{aligned}
+\]
+Hence \((g+\alpha u)/(1+\alpha)\) belongs to the inner class. Denote this shrunken density by \(h\). Parseval's identity and \(|a_\ell(g)|\le1\) give
+\[
+\|h-g\|_2^2=\left(\frac{\alpha}{1+\alpha}\right)^2
+\frac1\pi\sum_{\ell=1}^{r}|a_\ell(g)|^2\le\frac{r\alpha^2}{\pi}.
+\]
+Using \((a+b)^2\le2a^2+2b^2\) with the \(g_r\) above gives
+\[\operatorname{dist}(f,C_{r,D})^2\le2C_sR^2r^{-2s}+2r\alpha^2/\pi.\]
+Equation~\eqref{eq:degree} implies \(\alpha^2\le\eta/(2n)\), so the second term is at most \(\eta r/(\pi n)\). Projection risk on a fixed closed convex inner class is at most this approximation error plus \(r/(\pi n)\), yielding \eqref{eq:sobolevrisk}. Here \(\operatorname{dist}(f,C_{r,D})\) denotes the \(L^2\) distance to the corresponding density class.
+\end{proof}
+When \(s\) is known and \(r\asymp n^{1/(2s+1)}\), \eqref{eq:sobolevrisk} attains the standard Sobolev minimax rate \(n^{-2s/(2s+1)}\), and the sufficient condition \eqref{eq:degree} depends only on \(r,n,\eta\) without estimating unknown \(s,R\). Note that Proposition~\ref{prop:sobolev} applies to exact projection onto \(C_{r,D}\) at a prespecified \(D\), whereas Proposition~\ref{prop:fixedrisk} governs the data-adaptive doubling rule at fixed \(r\). When \(r=1\) and \(f=(1-\cos\theta)/(2\pi)\), the inner constraint at \(\phi_0=0\) and a point attaining equality yield squared approximation error \(1/[4\pi(D+1)^2]\), which is at most \(\eta/(\pi n)\) if and only if \(D+1\ge\sqrt{n/(4\eta)}\), giving the exact representation scale for this vanishing density.
+
+For the \emph{a posteriori} certificate in Proposition~\ref{prop:certificate}, a uniform \emph{a priori} sufficient condition is \(D\ge2r\) and
+\begin{equation}\label{eq:uniformdegree}
+D+1-r\ge\frac{8nr(r+1)}\eta,\quad
+2D+1\ge\pi\sqrt{\frac{8n}{\eta}\frac{r(r+1)(2r+1)}6}.
+\end{equation}
+Under exact inner, outer, and dual solves, \eqref{eq:uniformdegree} guarantees that the direct gap bound is at most \(\eta r/(\pi n)\) (see Appendix~\ref{app:direct}). Because both the Sobolev fixed-inner-class sufficient degree \eqref{eq:degree} (scaling as \(O(\sqrt{n})\)) and the uniform direct-gap sufficient degree \eqref{eq:uniformdegree} (scaling as \(O(n)\)) are highly conservative, the sample-specific \emph{a posteriori} certificate in Proposition~\ref{prop:certificate} is essential in practice: in Section~\ref{sec:sim}, actual stopping degrees are typically over 70 times smaller than the Sobolev sufficient degree \eqref{eq:degree} (and smaller still relative to the \(O(n)\) direct-gap bound \eqref{eq:uniformdegree}).
+
+\subsection{Risk bound for penalised fold selection and model averaging}
+Data-dependent penalties and oracle analysis of cross-validation have been studied by \citet{lerasle2012} and \citet{arlot2016}. We give a sufficient bound for the present nonnegative candidate family that permits the penalty to adapt to training-fold density bounds. Partition the iid data in advance into \(K\ge2\) folds of equal size \(m=n/K\). Candidate degrees \(r_1,\ldots,r_J\) are prespecified. Let \(g_{k,j}\) be the nonnegative normalised density of degree at most \(r_j\) trained on all but fold \(k\). Set \(A_j=(r_j+1)/(2\pi)\), \(A_{\max}=\max_j A_j\), and \(t=\log(KJ^2n^2)\). If \(U_{k,j}\) depends only on the training data for fold \(k\) and satisfies \(\|g_{k,j}\|_\infty\le U_{k,j}\le A_j\), let \(\overline U_j=K^{-1}\sum_kU_{k,j}\). For validation loss \(\gamma_k(g)=\int g^2-2m^{-1}\sum_{i\in I_k}g(X_i)\), choose
+\begin{equation}\label{eq:selection}
+\hat j=\arg\min_j\left\{\frac1K\sum_{k=1}^K\gamma_k(g_{k,j})+\frac{2\overline U_jt}{3m}\right\},\qquad
+\overline g_{\hat j}=\frac1K\sum_{k=1}^K g_{k,\hat j}.
+\end{equation}
+\begin{proposition}\label{prop:oracle}
+If \(\|f\|_\infty\le B\), then for every \(0<\epsilon<1\),
+\begin{equation}\label{eq:oracle}
+\begin{aligned}
+\mathbb E\|\overline g_{\hat j}-f\|_2^2\le\min_j\bigg\{&
+\frac{1+\epsilon}{1-\epsilon}\frac1K\sum_{k=1}^K\mathbb E\|g_{k,j}-f\|_2^2\\
+&+\frac{4Bt}{\epsilon m(1-\epsilon)}+\frac{4t\,\mathbb E\overline U_j}{3m(1-\epsilon)}\bigg\}
++\frac{2(A_{\max}+B)}{n^2}.
+\end{aligned}
+\end{equation}
+\end{proposition}
+A computable training-fold bound uses the maximum on equally spaced nodes and a second-order remainder. Let \(q_{k,j}=2\pi g_{k,j}\); under our convention its \(\ell\)th Fourier coefficient is \(a_{k,j,\ell}=\int g_{k,j}(\theta)e^{-i\ell\theta}d\theta=(2\pi)^{-1}\int q_{k,j}(\theta)e^{-i\ell\theta}d\theta\). For a prespecified number of nodes \(M\), set
+\begin{equation}\label{eq:foldbound}
+U_{k,j}=\min\left\{A_j,\ \frac1{2\pi}\left[
+\max_{0\le h<M}q_{k,j}(2\pi h/M)+\frac{\pi^2}{M^2}\sum_{\ell=1}^{r_j}\ell^2|a_{k,j,\ell}|\right]\right\}.
+\end{equation}
+At a continuous maximum the first derivative vanishes and the nearest node is at distance at most \(\pi/M\); hence \eqref{eq:foldbound} is an upper bound in exact arithmetic. The coefficient \(2/3\) in \eqref{eq:selection} comes from the linear remainder in Bernstein's inequality in Appendix~\ref{app:oracle} and cancellation in the selection inequality. Taking \(U_{k,j}=A_j\) recovers the fixed-upper-bound method; \eqref{eq:foldbound} is at most \(A_j\), so the corresponding theoretical upper bound in \eqref{eq:oracle} does not increase. Equation~\eqref{eq:foldbound} holds for any prespecified positive integer \(M\); increasing \(M\) can reduce the second-order remainder for given coefficients at the cost of more node evaluations. The simulations use \(M=257\). The proof is in Appendix~\ref{app:oracle}.
+
+Fix \(K\ge2\), \(\eta>0\), \(0<\epsilon<1\), and let \(n_{\mathrm{tr}}=n-m\). Suppose that every fold candidate meets the samplewise certificate required for \eqref{eq:fixedrisk} at threshold \(\eta r_j/(\pi n_{\mathrm{tr}})\), and that \(f\) satisfies \eqref{eq:sobolev} with \(s\in(1/2,2]\). Equation~\eqref{eq:sobolev} and Cauchy--Schwarz imply \(\|f\|_\infty<\infty\). Taking a doubling candidate grid covering up to \(\lfloor\sqrt n\rfloor\) gives \(J=O(\log n)\) and \(t=O(\log n)\) for fixed \(K\). Combining \eqref{eq:fixedrisk}, Appendix~\ref{app:kernel}, and \(\overline U_j\le A_j=O(r_j+1)\) with \(r_j\asymp(n/\log n)^{1/(2s+1)}\) yields the adaptive risk rate \(O((\log n/n)^{2s/(2s+1)})\) while allowing zeros of \(f\).
+
+Because \(A_j\) bounds the worst-case supremum over all nonnegative densities of degree \(r_j\), the fixed-bound penalty is conservative in finite samples. Equation~\eqref{eq:foldbound} tightens this penalty using the fitted training-fold density while preserving the non-asymptotic oracle guarantee in Proposition~\ref{prop:oracle}. We emphasise that Proposition~\ref{prop:oracle} applies specifically to the fold-averaged estimator \(\overline g_{\hat j}\) (evaluated in Table~\ref{tab:t4}), whereas the main simulations in Tables~\ref{tab:t1} and~\ref{tab:t3} evaluate standard unpenalised five-fold selection followed by full-sample refitting, which is a distinct estimation procedure.
+
+\section{Simulation studies}\label{sec:sim}
+\subsection{Design}
+We use six density scenarios: the uniform distribution; the cardioid with a zero, \((1+\cos(\theta-0.7))/(2\pi)\); and four von Mises or mixture densities. Writing \((w,\mu,\kappa)\) for component weight, location and concentration, the smooth scenario is \((1,0.7,2)\), bimodal is \((0.6,0.5,4)+(0.4,3.4,7)\), narrow is \((1,0.73,20)\), and boundary-crossing is \((0.7,0.03,10)+(0.3,3.2,3)\). Sample sizes are \(n=100,500\), with 40 replications per cell and 480 samples in total. For each sample, the three methods share random five-fold splits, select their parameters independently by validation loss, and refit on the full sample.
+
+The direct Fejér kernel density estimator is \(\widehat f_d=n^{-1}\sum_{i=1}^{n}K_d(\theta-X_i)\), with \(\ell\)th coefficient \((1-\ell/(d+1))\hat a_\ell\) for \(1\le\ell\le d\). It constructs a density directly by averaging a nonnegative kernel, shrinking low-order empirical coefficients by positive multipliers. Our method instead projects empirical coefficients under nonnegativity constraints and uses inverse multipliers to construct a feasible inner class and an \emph{a posteriori} bound relative to the full projection, avoiding the first-order bias floor of direct kernel smoothing.
+
+The methods compared are: (1) the certified method, with \(\eta=0.1\) and \(D\) adjusted by \eqref{eq:certificate}; (2) grid repair, which projects on the outer grid, repairs by \eqref{eq:repair}, and independently selects \(D/r\in\{2,4,8,16\}\); and (3) the full nonnegative trigonometric-polynomial SDP projection. All three use candidate statistical degrees \(\{0,1,2,3,4,6,8,12\}\). The validation loss for each candidate is \(\int_{-\pi}^{\pi}\hat f(\theta)^2\,d\theta-2n_v^{-1}\sum_{j\in V}\hat f(X_j)\), weighted by validation-fold sample size. The true density is used only for final integrated squared error (ISE), not tuning. Simulation ISE is evaluated via Parseval's identity with true Fourier coefficients truncated at degree 256 (whose omitted Bessel-series tail is below \(10^{-500}\), well below machine precision and identical across methods). For \(r=0,1\), the SDP uses analytical solutions; otherwise it uses SCS or a feasibility shortcut, with numerical negative eigenvalues truncated and trace normalised.
+
+\subsection{Results}
+Table~\ref{tab:t1} reports the mean ISE (MISE) over 40 replications across all six scenarios (complete Monte Carlo standard errors are provided in the supplementary repository).
+
+\begin{table}[htbp]
+\centering
+\caption{Mean integrated squared error (MISE) by scenario over 40 replications, with Monte Carlo standard errors (MCSE) in parentheses}\label{tab:t1}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lrrrrr}
+\toprule
+Scenario & \(n\) & Certified (MCSE) & Grid repair & SDP & Cert \(-\) SDP (MCSE) \\
+\midrule
+Smooth & 100 & 0.010473 (0.001419) & 0.011988 & 0.010646 & \(-0.000173\) (0.000412) \\
+Smooth & 500 & 0.002893 (0.000410) & 0.003104 & 0.003084 & \(-0.000191\) (0.000094) \\
+Bimodal & 100 & 0.016432 (0.001874) & 0.016728 & 0.015587 & \(+0.000845\) (0.000782) \\
+Bimodal & 500 & 0.004930 (0.000408) & 0.004734 & 0.004726 & \(+0.000204\) (0.000149) \\
+Narrow & 100 & 0.033245 (0.003007) & 0.034185 & 0.034418 & \(-0.001173\) (0.001074) \\
+Narrow & 500 & 0.003908 (0.000557) & 0.003934 & 0.003849 & \(+0.000059\) (0.000048) \\
+Boundary-crossing & 100 & 0.023749 (0.002843) & 0.023262 & 0.023740 & \(+0.000009\) (0.000610) \\
+Boundary-crossing & 500 & 0.004732 (0.000425) & 0.004922 & 0.004775 & \(-0.000043\) (0.000065) \\
+Uniform & 100 & 0.005174 (0.001229) & 0.005927 & 0.005220 & \(-0.000046\) (0.000046) \\
+Uniform & 500 & 0.000330 (0.000112) & 0.000330 & 0.000330 & \(0.000000\) (0.000000) \\
+Cardioid with zero & 100 & 0.008861 (0.002495) & 0.007693 & 0.008326 & \(+0.000536\) (0.000846) \\
+Cardioid with zero & 500 & 0.001713 (0.000410) & 0.001611 & 0.001623 & \(+0.000090\) (0.000042) \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[htbp]
+\centering
+\caption{Representation degree and smaller bound at stopping}\label{tab:t2}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lrrrrrr}
+\toprule
+Scenario & \(n\) & Fits & \(D/r\) median (Q1, Q3) & Direct & Ball & Tie \\
+\midrule
+Smooth & 100 & 40 & 8(4,10) & 67.5\% & 32.5\% & 0.0\% \\
+Smooth & 500 & 40 & 4(2,8) & 97.5\% & 2.5\% & 0.0\% \\
+Bimodal & 100 & 40 & 8(8,16) & 40.0\% & 60.0\% & 0.0\% \\
+Bimodal & 500 & 40 & 6(4,16) & 62.5\% & 37.5\% & 0.0\% \\
+Narrow & 100 & 40 & 12(8,32) & 62.5\% & 37.5\% & 0.0\% \\
+Narrow & 500 & 40 & 8(8,8) & 95.0\% & 5.0\% & 0.0\% \\
+Boundary & 100 & 40 & 8(4,8) & 75.0\% & 25.0\% & 0.0\% \\
+Boundary & 500 & 40 & 8(4,16) & 75.0\% & 25.0\% & 0.0\% \\
+Uniform & 100 & 16 & 2(2,2) & 6.2\% & 0.0\% & 93.8\% \\
+Uniform & 500 & 10 & 2(2,2) & 0.0\% & 0.0\% & 100.0\% \\
+Cardioid & 100 & 40 & 16(7,32) & 55.0\% & 45.0\% & 0.0\% \\
+Cardioid & 500 & 40 & 32(8,64) & 55.0\% & 42.5\% & 2.5\% \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.3em}
+\footnotesize\textit{Note:} Proportions are over nonzero-degree fits (excluding 54 zero-degree fits with no \(D/r\)); Q1 and Q3 use linear interpolation, and bounds are counted as tied when their difference is at most \(10^{-12}\) times the larger bound.
+\end{table}
+
+Table~\ref{tab:t2} reports an \emph{a posteriori} replay of the 480 final fits from Table~\ref{tab:t1} (\(\eta=0.1\)). Among the 426 nonzero-degree fits, the direct bound is smaller 275 times, the ball bound 125 times, and 26 are ties; notably, in 46 cases the ball bound reaches the stopping threshold while the direct bound does not, highlighting their complementary role in stopping.
+
+Across all six scenarios in Table~\ref{tab:t1}, the certified estimator closely matches full SDP projection: for instance, the paired certified-minus-SDP mean ISE difference is \(-0.0001731\) (paired MCSE \(0.0004122\)) for smooth \(n=100\) and \(0.0008455\) (paired MCSE \(0.0007821\)) for bimodal \(n=100\). In the concentrated narrow scenario (\(\kappa=20\)), Fourier truncation requires higher frequencies---the eighth von Mises Fourier coefficient \(I_8(\kappa)/I_0(\kappa)\) is \(0.198\) at \(\kappa=20\) versus \(1.2\times10^{-5}\) at \(\kappa=2\)---so all three methods select the boundary \(r=12\) at \(n=500\). Expanding the candidate degree cap to 24 increases the selection variance of unpenalised cross-validation at moderate sample size (raising mean ISE on the 40 samples from \(0.003908\) to \(0.005959\) for certified and \(0.003849\) to \(0.005964\) for SDP), yet preserves near-identical accuracy between the two methods (paired mean difference \(-5.06\times10^{-6}\), MCSE \(5.28\times10^{-5}\)). On 20 independent narrow samples with expanded caps (\(r\le24\), grid-repair \(D/r\le32\)), certified, grid-repair, and SDP MISEs are \(0.030244, 0.029315, 0.029432\) (\(n=100\)) and \(0.007108, 0.007327, 0.007038\) (\(n=500\)), with grid repair still hitting its \(D/r=32\) cap in 70\%--85\% of cases.
+
+To assess sensitivity to fixed-grid positivity bounds, we also implemented linear constraints from \citet{pfister2019} on the first eight samples per cell. Under the standard \(D/r\le16\) grid at narrow \(n=500\), the fixed-grid baseline incurs a much higher MISE (\(0.021591\) vs.\ \(0.003025\) for our certified method), and even after expanding its cap to \(D/r\le64\) (reducing MISE to \(0.003855\) at \(n=500\) and \(0.034069\) vs.\ \(0.032107\) at \(n=100\)), it remains pinned at its grid boundary in 87.5\%--100\% of cases. By contrast, our adaptive certificate automatically refines \(D\) without manual grid-range tuning.
+
+Table~\ref{tab:t3} benchmarks the certified estimator against direct Fejér kernel smoothing (tuned over degrees \(\{0,1,2,3,4,6,8,12,16,24,32,48,64,96,128\}\)) across 60 replications in the bimodal and narrow scenarios. The certified projection substantially outperforms direct Fejér smoothing: at \(n=500\), the paired Fejér-minus-certified mean ISE difference is \(0.001745\) (MCSE \(0.000300\)) for bimodal (a 27\% error reduction) and \(0.010170\) (MCSE \(0.001057\)) for narrow (over a three-fold error reduction), confirming that constrained projection eliminates the first-order bias floor of direct Fejér kernel smoothing.
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison with direct Fejér kernel smoothing for bimodal and narrow scenarios: mean ISE over 60 replications}\label{tab:t3}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+Scenario & \(n\) & Certified & Grid repair & SDP & Fejér kernel \\
+\midrule
+Bimodal & 100 & 0.015953 & 0.016438 & 0.015787 & 0.019169 \\
+Bimodal & 500 & 0.004703 & 0.004600 & 0.004593 & 0.006448 \\
+Narrow & 100 & 0.032278 & 0.033621 & 0.033811 & 0.057709 \\
+Narrow & 500 & 0.004510 & 0.004592 & 0.004514 & 0.014680 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of related circular density estimation and nonnegative trigonometric approximation approaches}\label{tab:compare}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}Xccccc}
+\toprule
+Approach & Nonneg. & Zeros & No SDP & Risk theory & \(O(r/n)\) cert. \\
+\midrule
+Trig.\ density bases \citep{binette2022} & Yes & Via mixtures & Yes & Bayesian & No \\
+Fejér-poly.\ estimation \citep{klar2025} & Yes & Yes & Yes & Frequentist & No \\
+SDP trig.\ approx.\ (related; \citealp{siem2008}) & Yes & Yes & No & Not studied & No \\
+Grid bounds (adapted; \citealp{pfister2019}) & Yes & Yes & Yes & Not studied & No \\
+\textbf{Certified projection (this paper)} & \textbf{Yes*} & \textbf{Yes} & \textbf{Yes} & \textbf{Frequentist} & \textbf{Yes*} \\
+\bottomrule
+\end{tabularx}
+
+\vspace{0.3em}
+\footnotesize\textit{Note:} *Holds rigorously in exact arithmetic (Propositions~\ref{prop:classes} and~\ref{prop:certificate}); numerical implementation verifies feasibility and residuals in floating-point arithmetic. ``Zeros'' indicates whether the framework accommodates densities vanishing on the circle.
+\end{table}
+
+The remainder of the paper is organised as follows. Section~\ref{sec:model} introduces the certified projection model and stopping rule. Section~\ref{sec:risk} establishes fixed-degree, Sobolev, and cross-validation risk bounds. Section~\ref{sec:sim} presents simulation comparisons against full SDP, grid-repair, and direct Fejér kernel baselines. Section~\ref{sec:app} illustrates a computational extension to grouped hourly bike-sharing data, and Section~\ref{sec:discussion} concludes. The notation is summarised in Appendix~\ref{app:notation}.
+
+\section{Model and computable projection certificates}\label{sec:model}
+\subsection{Nonnegative densities and inner and outer approximations}
+Let \(X_1,\dots,X_n\) be independent and identically distributed continuous observations on the circle \([0,2\pi)\), such as directional measurements or periodic event times. To avoid both the negative values of truncated Fourier series and the first-order bias floor of direct Fejér kernel smoothing, we project the empirical Fourier coefficients onto the compact convex set of nonnegative trigonometric densities of degree \(r\) (the normalised slice of the nonnegative trigonometric polynomial cone with constant Fourier coefficient fixed at one). For an integer \(r\ge1\) and complex coefficients \(a_\ell\), define
+\begin{equation}
+f_z(\theta)=\frac1{2\pi}\left\{1+2\operatorname{Re}\sum_{\ell=1}^r a_\ell e^{i\ell\theta}\right\},\quad
+z=(\operatorname{Re}a_1,\ldots,\operatorname{Re}a_r,\operatorname{Im}a_1,\ldots,\operatorname{Im}a_r)^\top .
+\label{eq:density}
+\end{equation}
+Write \(q_z(\theta)=2\pi f_z(\theta)\) and let \(\mathcal K_r=\{z\in\mathbb R^{2r}: f_z(\theta)\ge0,\ 0\le\theta<2\pi\}\). Equation~\eqref{eq:density} integrates to one, so each element of \(\mathcal K_r\) defines a density. Its coefficients satisfy \(|a_\ell|\le1\), and \(\mathcal K_r\) is therefore compact and convex. Let \(\hat a_\ell=n^{-1}\sum_j e^{-i\ell X_j}\) be the empirical Fourier coefficients, and arrange their real and imaginary parts in the order in \eqref{eq:density} to form \(c\). The target projection is
+\begin{equation}
+z^*=\arg\min_{z\in\mathcal K_r}J(z),\qquad J(z)=\tfrac12\|z-c\|_2^2.
+\label{eq:projection}
+\end{equation}
+Take a representation degree \(D\ge r\), \(L=2D+1\) nodes \(\phi_k=2\pi k/L\), and \(t_\ell=1-\ell/(D+1)\). Write
+\begin{equation}
+(A_Iz)_k=2\operatorname{Re}\sum_{\ell=1}^r\frac{a_\ell}{t_\ell}e^{i\ell\phi_k},\qquad
+(A_Oz)_k=2\operatorname{Re}\sum_{\ell=1}^ra_\ell e^{i\ell\phi_k}.
+\label{eq:matrices}
+\end{equation}
+Define the inner class \(C_{r,D}=\{z:\mathbf1+A_Iz\ge0\}\) and the outer class \(O_{r,D}=\{z:\mathbf1+A_Oz\ge0\}\), with inequalities interpreted componentwise.
+
+\begin{proposition}\label{prop:classes}
+For every \(D\ge r\), \(C_{r,D}\subseteq\mathcal K_r\subseteq O_{r,D}\). The inner constraints are sufficient, but generally not necessary, for global nonnegativity.
+\end{proposition}
+\begin{proof}
+For \(z\in C_{r,D}\), set \(p_k=[1+(A_Iz)_k]/L\ge0\). Write \(d_0=1\), \(d_m=a_m/t_m\) and \(d_{-m}=\overline{a_m}/t_m\) for \(1\le m\le r\). For \(0\le\ell\le D\), orthogonality of roots of unity gives
+\[
+\sum_{k=0}^{L-1}p_ke^{-i\ell\phi_k}
+=\sum_{m=-r}^{r}d_m\left(\frac1L\sum_{k=0}^{L-1}e^{i(m-\ell)\phi_k}\right).
+\]
+Since \(|m-\ell|\le r+D\le2D<L\), the parenthesised term equals one only when \(m=\ell\), and zero otherwise. Thus \(\sum_kp_k=1\); for \(1\le\ell\le r\) the sum is \(a_\ell/t_\ell\), and for \(r<\ell\le D\) it is zero. The normalised Fejér kernel is
+\begin{equation}
+K_D(\theta)=\frac{1}{2\pi(D+1)}\left|\sum_{j=0}^De^{ij\theta}\right|^2,
+\label{eq:fejer}
+\end{equation}
+whose \(\ell\)th Fourier multiplier is \(t_\ell\). Hence \(f_z=\sum_k p_kK_D(\theta-\phi_k)\ge0\). Conversely, a function that is nonnegative everywhere is nonnegative at the nodes, so \(\mathcal K_r\subseteq O_{r,D}\).
+\end{proof}
+
+Geometrically, the inner-class construction rests on the triangular weights of a geometric square: for \(Q_\beta(1,z)=\sum_{j=0}^{D}(\beta z)^j\) with \(z=e^{i\theta}\) and \(\beta=e^{-i\phi}\), \(|Q_\beta(1,z)|^2/[2\pi(D+1)]\) is the shifted Fejér kernel in \eqref{eq:fejer}, whose multiplicities produce the multipliers \(t_\ell\). The output \(z_I\) is obtained as a numerical solution of \(\min_{z\in C_{r,D}}J(z)\); sampling the inverse-multiplier polynomial ensures global nonnegativity between nodes, whereas checking the original density only at the nodes does not.
+
+Existing grid certificates and our inner class are non-nested. For example, let \(r=1,D=8,L=17\) and \(q(\theta)=1-0.92\cos\theta\). The inverse-Fejér node value at \(\theta=0\) is \(1-0.92/(8/9)<0\), so the polynomial lies outside \(C_{r,D}\), whereas the grid bound of \citet{pfister2019} with \(C=(1-2/17)^{-1/2}\), node minimum \(B=0.08\), and maximum \(A\le1.92\) satisfies \((C+1)B-(C-1)A>0\). However, pairing our linear inner class with outer constraints and a dual lower bound yields an adaptive \(O(r/n)\) stopping certificate that avoids the sensitivity of fixed-grid bounds to the candidate \(D/r\) range (see Section~\ref{sec:sim}).
+
+\subsection{Error bounds and stopping rule}
+For any \(\lambda\ge0\), the dual function of the outer-constrained problem and its associated ball centre are
+\begin{equation}
+g(\lambda)=-\tfrac12\|A_O^\top\lambda\|^2-\lambda^\top(\mathbf1+A_Oc),\qquad v=c+A_O^\top\lambda.
+\label{eq:dual}
+\end{equation}
+Weak duality gives \(g(\lambda)\le\min_{O_{r,D}}J\le J(z^*)\). For any \(z_o\in O_{r,D}\), with coefficients \(b_\ell\), define
+\begin{equation}
+\begin{aligned}
+m_g &= \min_k\{1+(A_Oz_o)_k\}, & \beta &= \frac{\pi^2}{L^2}\sum_{\ell=1}^r \ell^2|b_\ell|,\\
+\delta &= \max(0,\beta-m_g), & z_R &= \frac{z_o}{1+\delta}.
+\end{aligned}
+\label{eq:repair}
+\end{equation}
+Outer feasibility gives \(m_g\ge0\) and \(0\le\delta\le\beta\). The node values are nonnegative and have discrete average one. Discrete orthogonality then gives \(|b_\ell|\le1\), whence
+\[
+\beta\le\frac{\pi^2 r(r+1)(2r+1)}{6(2D+1)^2}.
+\]
+For fixed \(r\), this bound decreases as \(O(D^{-2})\). If the outer point is near the boundary or the grid is coarse, the correction can make the ball bound loose. The direct gap bound does not use the corrected point; taking the minimum cannot be worse than using the direct bound alone.
+
+At a global minimiser \(\theta^*\), \(q'_{z_o}(\theta^*)=0\), and the nearest node is at distance at most \(\pi/L\). Since \(\|q_{z_o}''\|_\infty\le2\sum_{\ell=1}^r\ell^2|b_\ell|\), Taylor's theorem applied between the minimiser and its nearest node gives \(q_{z_o}(\theta^*)\ge m_g-\beta\), and hence \(z_R\in\mathcal K_r\). Let \(U_I=J(z_I)\) and \(U_R=J(z_R)\).
+
+\begin{proposition}\label{prop:certificate}
+If \(z_I\in C_{r,D}\), \(z_o\in O_{r,D}\), and \(\lambda\ge0\), then
+\begin{equation}
+\|f_{z_I}-f_{z^*}\|_{L^2}^2\le E_D
+=\frac1\pi\min\left\{2(U_I-g),\ \left[\|z_I-v\|+\sqrt{2(U_R-g)}\right]^2\right\}.
+\label{eq:certificate}
+\end{equation}
+\end{proposition}
+\begin{proof}
+The projection variational inequality gives \(J(z_I)-J(z^*)\ge\|z_I-z^*\|^2/2\); the first bound follows from \(g\le J(z^*)\). For any \(z\in\mathcal K_r\), completing the square yields \(J(z)\ge g+\|z-v\|^2/2\). Since \(J(z^*)\le U_R\), the point \(z^*\) lies in the ball centred at \(v\) with radius \(\sqrt{2(U_R-g)}\); the triangle inequality yields the second bound. Parseval's identity gives \(\|f_z-f_w\|_{L^2}^2=\|z-w\|^2/\pi\).
+\end{proof}
+
+The result applies to any feasible inner and outer points and any nonnegative multiplier; exact optimisation is unnecessary. For \(\eta>0\), the algorithm starts at \(D=2r\) and doubles \(D\) until \(E_D\le\eta r/(\pi n)\) (returning the uniform density for \(r=0\)). Because both classes approximate \(\mathcal K_r\) for fixed \(r\), the procedure terminates in finite steps under exact optimisation (even though the inner classes need not be nested across doublings).
+
+To keep the theoretical and numerical layers distinct, note that Proposition~\ref{prop:certificate} provides a rigorous \emph{theoretical certificate} in exact arithmetic. In our numerical implementation, we compute a floating-point evaluation of this certificate by solving the inner and outer quadratic programmes via SLSQP (capped at \(D\le256r\)) and recovering a nonnegative dual multiplier via nonnegative least squares on active constraints; node slack, stationarity residuals, and the stopping threshold are checked at each step, with small numerical violations repaired by shrinkage towards the uniform density (Appendix~\ref{app:numerical}). Rigorous machine-verifiable certification via interval arithmetic or outward rounding is left for future work.
+
+\section{Statistical risk and representation degree}\label{sec:risk}
+\subsection{Fixed-degree risk based on the a posteriori certificate}
+Let \(f\in L^2\) be the true circular density and let \(\mathcal F_r=\{f_z:z\in\mathcal K_r\}\). Expectations below are over independent and identically distributed observations, and \(r\) is fixed before observing the data.
+\begin{proposition}\label{prop:fixedrisk}
+Suppose \(\eta\ge0\) and the computation satisfies \(E_D\le\eta r/(\pi n)\) for every sample. Then, for every \(\epsilon>0\),
+\begin{equation}\label{eq:fixedrisk}
+\mathbb E\|f_{z_I}-f\|_2^2\le(1+\epsilon)\operatorname{dist}(f,\mathcal F_r)^2+
+\left[(1+\epsilon)+(1+\epsilon^{-1})\eta\right]\frac{r}{\pi n}.
+\end{equation}
+\end{proposition}
+\begin{proof}
+Let \(b\) be the vector of the first \(r\) true Fourier coefficients and \(e=c-b\) the empirical error. For any \(w\in\mathcal K_r\), set \(d=z^*-w\). The projection inequality and \(2e^\top d-\|d\|^2\le\|e\|^2\) give
+\[\|z^*-b\|^2\le\|w-b\|^2+\|e\|^2.\]
+Combining this with the Fourier tail and \(\mathbb E\|e\|^2=\sum_{\ell=1}^r(1-|a_\ell(f)|^2)/n\le r/n\), the risk of the full projection is at most \(\operatorname{dist}(f,\mathcal F_r)^2+r/(\pi n)\). The inequality \(\|u+v\|^2\le(1+\epsilon)\|u\|^2+(1+\epsilon^{-1})\|v\|^2\), together with the samplewise certificate, gives \eqref{eq:fixedrisk}.
+\end{proof}
+Equation~\eqref{eq:fixedrisk} permits \(D\) to be refined adaptively using the same data, because the certificate holds samplewise.
+
+\subsection{Densities with zeros and a fixed representation degree}
+Let \(a_\ell(f)=\int_0^{2\pi}e^{-i\ell\theta}f(\theta)d\theta\), and suppose that, for \(0<s\le2\),
+\begin{equation}\label{eq:sobolev}
+\sum_{\ell\ge1}\ell^{2s}|a_\ell(f)|^2\le R^2.
+\end{equation}
+A positive Jackson-type convolution constructed from the squared Fejér kernel yields \(g_r\in\mathcal F_r\) with \(\|f-g_r\|_2^2\le C_sR^2r^{-2s}\), for \(r\ge2\). This construction uses only \(f\ge0\) and requires no strictly positive lower bound. To distinguish data-dependent stopping from a prespecified representation degree, consider exact projection onto \(C_{r,D}\) with \(D\) fixed before sampling.
+\begin{proposition}\label{prop:sobolev}
+If \(r\ge2\), \(\eta>0\), and
+\begin{equation}\label{eq:degree}
+D\ge\max\left\{2r,\ r-1+\left\lceil r(r+1)\sqrt{2n/\eta}\right\rceil\right\},
+\end{equation}
+then the corresponding inner-class projection estimator satisfies
+\begin{equation}\label{eq:sobolevrisk}
+\mathbb E\|f_{z_I}-f\|_2^2\le2C_sR^2r^{-2s}+\frac{(1+\eta)r}{\pi n}.
+\end{equation}
+\end{proposition}
+\begin{proof}
+Let \(u=(2\pi)^{-1}\) and \(\alpha=r(r+1)/(D+1-r)\). For \(g\in\mathcal F_r\), write \(z_g\) for its coefficient vector. Since \(q_{z_g}(\phi_k)\ge0\) and \(|a_\ell(g)|\le1\), at each node
+\[
+\begin{aligned}
+1+(A_Iz_g)_k &\ge -2\sum_{\ell=1}^r\left(\frac1{t_\ell}-1\right)|a_\ell(g)|\\
+&=-2\sum_{\ell=1}^r\frac{\ell|a_\ell(g)|}{D+1-\ell}
+\ge-\frac{2}{D+1-r}\sum_{\ell=1}^r\ell|a_\ell(g)|\ge-\alpha.
+\end{aligned}
+\]
+Hence \((g+\alpha u)/(1+\alpha)\) belongs to the inner class. Denote this shrunken density by \(h\). Parseval's identity and \(|a_\ell(g)|\le1\) give
+\[
+\|h-g\|_2^2=\left(\frac{\alpha}{1+\alpha}\right)^2
+\frac1\pi\sum_{\ell=1}^{r}|a_\ell(g)|^2\le\frac{r\alpha^2}{\pi}.
+\]
+Using \((a+b)^2\le2a^2+2b^2\) with the \(g_r\) above gives
+\[\operatorname{dist}(f,C_{r,D})^2\le2C_sR^2r^{-2s}+2r\alpha^2/\pi.\]
+Equation~\eqref{eq:degree} implies \(\alpha^2\le\eta/(2n)\), so the second term is at most \(\eta r/(\pi n)\). Projection risk on a fixed closed convex inner class is at most this approximation error plus \(r/(\pi n)\), yielding \eqref{eq:sobolevrisk}. Here \(\operatorname{dist}(f,C_{r,D})\) denotes the \(L^2\) distance to the corresponding density class.
+\end{proof}
+When \(s\) is known and \(r\asymp n^{1/(2s+1)}\), \eqref{eq:sobolevrisk} attains the standard Sobolev minimax rate \(n^{-2s/(2s+1)}\), and the sufficient condition \eqref{eq:degree} depends only on \(r,n,\eta\) without estimating unknown \(s,R\). Note that Proposition~\ref{prop:sobolev} applies to exact projection onto \(C_{r,D}\) at a prespecified \(D\), whereas Proposition~\ref{prop:fixedrisk} governs the data-adaptive doubling rule at fixed \(r\). When \(r=1\) and \(f=(1-\cos\theta)/(2\pi)\), the inner constraint at \(\phi_0=0\) and a point attaining equality yield squared approximation error \(1/[4\pi(D+1)^2]\), which is at most \(\eta/(\pi n)\) if and only if \(D+1\ge\sqrt{n/(4\eta)}\), giving the exact representation scale for this vanishing density.
+
+For the \emph{a posteriori} certificate in Proposition~\ref{prop:certificate}, a uniform \emph{a priori} sufficient condition is \(D\ge2r\) and
+\begin{equation}\label{eq:uniformdegree}
+D+1-r\ge\frac{8nr(r+1)}\eta,\quad
+2D+1\ge\pi\sqrt{\frac{8n}{\eta}\frac{r(r+1)(2r+1)}6}.
+\end{equation}
+Under exact inner, outer, and dual solves, \eqref{eq:uniformdegree} guarantees that the direct gap bound is at most \(\eta r/(\pi n)\) (see Appendix~\ref{app:direct}). Because both the Sobolev fixed-inner-class sufficient degree \eqref{eq:degree} (scaling as \(O(\sqrt{n})\)) and the uniform direct-gap sufficient degree \eqref{eq:uniformdegree} (scaling as \(O(n)\)) are highly conservative, the sample-specific \emph{a posteriori} certificate in Proposition~\ref{prop:certificate} is essential in practice: in Section~\ref{sec:sim}, actual stopping degrees are typically over 70 times smaller than the Sobolev sufficient degree \eqref{eq:degree} (and smaller still relative to the \(O(n)\) direct-gap bound \eqref{eq:uniformdegree}).
+
+\subsection{Risk bound for penalised fold selection and model averaging}
+Data-dependent penalties and oracle analysis of cross-validation have been studied by \citet{lerasle2012} and \citet{arlot2016}. We give a sufficient bound for the present nonnegative candidate family that permits the penalty to adapt to training-fold density bounds. Partition the iid data in advance into \(K\ge2\) folds of equal size \(m=n/K\). Candidate degrees \(r_1,\ldots,r_J\) are prespecified. Let \(g_{k,j}\) be the nonnegative normalised density of degree at most \(r_j\) trained on all but fold \(k\). Set \(A_j=(r_j+1)/(2\pi)\), \(A_{\max}=\max_j A_j\), and \(t=\log(KJ^2n^2)\). If \(U_{k,j}\) depends only on the training data for fold \(k\) and satisfies \(\|g_{k,j}\|_\infty\le U_{k,j}\le A_j\), let \(\overline U_j=K^{-1}\sum_kU_{k,j}\). For validation loss \(\gamma_k(g)=\int g^2-2m^{-1}\sum_{i\in I_k}g(X_i)\), choose
+\begin{equation}\label{eq:selection}
+\hat j=\arg\min_j\left\{\frac1K\sum_{k=1}^K\gamma_k(g_{k,j})+\frac{2\overline U_jt}{3m}\right\},\qquad
+\overline g_{\hat j}=\frac1K\sum_{k=1}^K g_{k,\hat j}.
+\end{equation}
+\begin{proposition}\label{prop:oracle}
+If \(\|f\|_\infty\le B\), then for every \(0<\epsilon<1\),
+\begin{equation}\label{eq:oracle}
+\begin{aligned}
+\mathbb E\|\overline g_{\hat j}-f\|_2^2\le\min_j\bigg\{&
+\frac{1+\epsilon}{1-\epsilon}\frac1K\sum_{k=1}^K\mathbb E\|g_{k,j}-f\|_2^2\\
+&+\frac{4Bt}{\epsilon m(1-\epsilon)}+\frac{4t\,\mathbb E\overline U_j}{3m(1-\epsilon)}\bigg\}
++\frac{2(A_{\max}+B)}{n^2}.
+\end{aligned}
+\end{equation}
+\end{proposition}
+A computable training-fold bound uses the maximum on equally spaced nodes and a second-order remainder. Let \(q_{k,j}=2\pi g_{k,j}\); under our convention its \(\ell\)th Fourier coefficient is \(a_{k,j,\ell}=\int g_{k,j}(\theta)e^{-i\ell\theta}d\theta=(2\pi)^{-1}\int q_{k,j}(\theta)e^{-i\ell\theta}d\theta\). For a prespecified number of nodes \(M\), set
+\begin{equation}\label{eq:foldbound}
+U_{k,j}=\min\left\{A_j,\ \frac1{2\pi}\left[
+\max_{0\le h<M}q_{k,j}(2\pi h/M)+\frac{\pi^2}{M^2}\sum_{\ell=1}^{r_j}\ell^2|a_{k,j,\ell}|\right]\right\}.
+\end{equation}
+At a continuous maximum the first derivative vanishes and the nearest node is at distance at most \(\pi/M\); hence \eqref{eq:foldbound} is an upper bound in exact arithmetic. The coefficient \(2/3\) in \eqref{eq:selection} comes from the linear remainder in Bernstein's inequality in Appendix~\ref{app:oracle} and cancellation in the selection inequality. Taking \(U_{k,j}=A_j\) recovers the fixed-upper-bound method; \eqref{eq:foldbound} is at most \(A_j\), so the corresponding theoretical upper bound in \eqref{eq:oracle} does not increase. Equation~\eqref{eq:foldbound} holds for any prespecified positive integer \(M\); increasing \(M\) can reduce the second-order remainder for given coefficients at the cost of more node evaluations. The simulations use \(M=257\). The proof is in Appendix~\ref{app:oracle}.
+
+Fix \(K\ge2\), \(\eta>0\), \(0<\epsilon<1\), and let \(n_{\mathrm{tr}}=n-m\). Suppose that every fold candidate meets the samplewise certificate required for \eqref{eq:fixedrisk} at threshold \(\eta r_j/(\pi n_{\mathrm{tr}})\), and that \(f\) satisfies \eqref{eq:sobolev} with \(s\in(1/2,2]\). Equation~\eqref{eq:sobolev} and Cauchy--Schwarz imply \(\|f\|_\infty<\infty\). Taking a doubling candidate grid covering up to \(\lfloor\sqrt n\rfloor\) gives \(J=O(\log n)\) and \(t=O(\log n)\) for fixed \(K\). Combining \eqref{eq:fixedrisk}, Appendix~\ref{app:kernel}, and \(\overline U_j\le A_j=O(r_j+1)\) with \(r_j\asymp(n/\log n)^{1/(2s+1)}\) yields the adaptive risk rate \(O((\log n/n)^{2s/(2s+1)})\) while allowing zeros of \(f\).
+
+Because \(A_j\) bounds the worst-case supremum over all nonnegative densities of degree \(r_j\), the fixed-bound penalty is conservative in finite samples. Equation~\eqref{eq:foldbound} tightens this penalty using the fitted training-fold density while preserving the non-asymptotic oracle guarantee in Proposition~\ref{prop:oracle}. We emphasise that Proposition~\ref{prop:oracle} applies specifically to the fold-averaged estimator \(\overline g_{\hat j}\) (evaluated in Table~\ref{tab:t4}), whereas the main simulations in Tables~\ref{tab:t1} and~\ref{tab:t3} evaluate standard unpenalised five-fold selection followed by full-sample refitting, which is a distinct estimation procedure.
+
+\section{Simulation studies}\label{sec:sim}
+\subsection{Design}
+We use six density scenarios: the uniform distribution; the cardioid with a zero, \((1+\cos(\theta-0.7))/(2\pi)\); and four von Mises or mixture densities. Writing \((w,\mu,\kappa)\) for component weight, location and concentration, the smooth scenario is \((1,0.7,2)\), bimodal is \((0.6,0.5,4)+(0.4,3.4,7)\), narrow is \((1,0.73,20)\), and boundary-crossing is \((0.7,0.03,10)+(0.3,3.2,3)\). Sample sizes are \(n=100,500\), with 40 replications per cell and 480 samples in total. For each sample, the three methods share random five-fold splits, select their parameters independently by validation loss, and refit on the full sample.
+
+The direct Fejér kernel density estimator is \(\widehat f_d=n^{-1}\sum_{i=1}^{n}K_d(\theta-X_i)\), with \(\ell\)th coefficient \((1-\ell/(d+1))\hat a_\ell\) for \(1\le\ell\le d\). It constructs a density directly by averaging a nonnegative kernel, shrinking low-order empirical coefficients by positive multipliers. Our method instead projects empirical coefficients under nonnegativity constraints and uses inverse multipliers to construct a feasible inner class and an \emph{a posteriori} bound relative to the full projection, avoiding the first-order bias floor of direct kernel smoothing.
+
+The methods compared are: (1) the certified method, with \(\eta=0.1\) and \(D\) adjusted by \eqref{eq:certificate}; (2) grid repair, which projects on the outer grid, repairs by \eqref{eq:repair}, and independently selects \(D/r\in\{2,4,8,16\}\); and (3) the full nonnegative trigonometric-polynomial SDP projection. All three use candidate statistical degrees \(\{0,1,2,3,4,6,8,12\}\). The validation loss for each candidate is \(\int_{-\pi}^{\pi}\hat f(\theta)^2\,d\theta-2n_v^{-1}\sum_{j\in V}\hat f(X_j)\), weighted by validation-fold sample size. The true density is used only for final integrated squared error (ISE), not tuning. Simulation ISE is evaluated via Parseval's identity with true Fourier coefficients truncated at degree 256 (whose omitted Bessel-series tail is below \(10^{-500}\), well below machine precision and identical across methods). For \(r=0,1\), the SDP uses analytical solutions; otherwise it uses SCS or a feasibility shortcut, with numerical negative eigenvalues truncated and trace normalised.
+
+\subsection{Results}
+Table~\ref{tab:t1} reports the mean ISE (MISE) over 40 replications across all six scenarios (complete Monte Carlo standard errors are provided in the supplementary repository).
+
+\begin{table}[htbp]
+\centering
+\caption{Mean integrated squared error (MISE) by scenario over 40 replications, with Monte Carlo standard errors (MCSE) in parentheses}\label{tab:t1}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lrrrrr}
+\toprule
+Scenario & \(n\) & Certified (MCSE) & Grid repair & SDP & Cert \(-\) SDP (MCSE) \\
+\midrule
+Smooth & 100 & 0.010473 (0.001419) & 0.011988 & 0.010646 & \(-0.000173\) (0.000412) \\
+Smooth & 500 & 0.002893 (0.000410) & 0.003104 & 0.003084 & \(-0.000191\) (0.000094) \\
+Bimodal & 100 & 0.016432 (0.001874) & 0.016728 & 0.015587 & \(+0.000845\) (0.000782) \\
+Bimodal & 500 & 0.004930 (0.000408) & 0.004734 & 0.004726 & \(+0.000204\) (0.000149) \\
+Narrow & 100 & 0.033245 (0.003007) & 0.034185 & 0.034418 & \(-0.001173\) (0.001074) \\
+Narrow & 500 & 0.003908 (0.000557) & 0.003934 & 0.003849 & \(+0.000059\) (0.000048) \\
+Boundary-crossing & 100 & 0.023749 (0.002843) & 0.023262 & 0.023740 & \(+0.000009\) (0.000610) \\
+Boundary-crossing & 500 & 0.004732 (0.000425) & 0.004922 & 0.004775 & \(-0.000043\) (0.000065) \\
+Uniform & 100 & 0.005174 (0.001229) & 0.005927 & 0.005220 & \(-0.000046\) (0.000046) \\
+Uniform & 500 & 0.000330 (0.000112) & 0.000330 & 0.000330 & \(0.000000\) (0.000000) \\
+Cardioid with zero & 100 & 0.008861 (0.002495) & 0.007693 & 0.008326 & \(+0.000536\) (0.000846) \\
+Cardioid with zero & 500 & 0.001713 (0.000410) & 0.001611 & 0.001623 & \(+0.000090\) (0.000042) \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[htbp]
+\centering
+\caption{Representation degree and smaller bound at stopping}\label{tab:t2}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lrrrrrr}
+\toprule
+Scenario & \(n\) & Fits & \(D/r\) median (Q1, Q3) & Direct & Ball & Tie \\
+\midrule
+Smooth & 100 & 40 & 8(4,10) & 67.5\% & 32.5\% & 0.0\% \\
+Smooth & 500 & 40 & 4(2,8) & 97.5\% & 2.5\% & 0.0\% \\
+Bimodal & 100 & 40 & 8(8,16) & 40.0\% & 60.0\% & 0.0\% \\
+Bimodal & 500 & 40 & 6(4,16) & 62.5\% & 37.5\% & 0.0\% \\
+Narrow & 100 & 40 & 12(8,32) & 62.5\% & 37.5\% & 0.0\% \\
+Narrow & 500 & 40 & 8(8,8) & 95.0\% & 5.0\% & 0.0\% \\
+Boundary & 100 & 40 & 8(4,8) & 75.0\% & 25.0\% & 0.0\% \\
+Boundary & 500 & 40 & 8(4,16) & 75.0\% & 25.0\% & 0.0\% \\
+Uniform & 100 & 16 & 2(2,2) & 6.2\% & 0.0\% & 93.8\% \\
+Uniform & 500 & 10 & 2(2,2) & 0.0\% & 0.0\% & 100.0\% \\
+Cardioid & 100 & 40 & 16(7,32) & 55.0\% & 45.0\% & 0.0\% \\
+Cardioid & 500 & 40 & 32(8,64) & 55.0\% & 42.5\% & 2.5\% \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.3em}
+\footnotesize\textit{Note:} Proportions are over nonzero-degree fits (excluding 54 zero-degree fits with no \(D/r\)); Q1 and Q3 use linear interpolation, and bounds are counted as tied when their difference is at most \(10^{-12}\) times the larger bound.
+\end{table}
+
+Table~\ref{tab:t2} reports an \emph{a posteriori} replay of the 480 final fits from Table~\ref{tab:t1} (\(\eta=0.1\)). Among the 426 nonzero-degree fits, the direct bound is smaller 275 times, the ball bound 125 times, and 26 are ties; notably, in 46 cases the ball bound reaches the stopping threshold while the direct bound does not, highlighting their complementary role in stopping.
+
+Across all six scenarios in Table~\ref{tab:t1}, the certified estimator closely matches full SDP projection: for instance, the paired certified-minus-SDP mean ISE difference is \(-0.0001731\) (paired MCSE \(0.0004122\)) for smooth \(n=100\) and \(0.0008455\) (paired MCSE \(0.0007821\)) for bimodal \(n=100\). In the concentrated narrow scenario (\(\kappa=20\)), Fourier truncation requires higher frequencies---the eighth von Mises Fourier coefficient \(I_8(\kappa)/I_0(\kappa)\) is \(0.198\) at \(\kappa=20\) versus \(1.2\times10^{-5}\) at \(\kappa=2\)---so all three methods select the boundary \(r=12\) at \(n=500\). Expanding the candidate degree cap to 24 increases the selection variance of unpenalised cross-validation at moderate sample size (raising mean ISE on the 40 samples from \(0.003908\) to \(0.005959\) for certified and \(0.003849\) to \(0.005964\) for SDP), yet preserves near-identical accuracy between the two methods (paired mean difference \(-5.06\times10^{-6}\), MCSE \(5.28\times10^{-5}\)). On 20 independent narrow samples with expanded caps (\(r\le24\), grid-repair \(D/r\le32\)), certified, grid-repair, and SDP MISEs are \(0.030244, 0.029315, 0.029432\) (\(n=100\)) and \(0.007108, 0.007327, 0.007038\) (\(n=500\)), with grid repair still hitting its \(D/r=32\) cap in 70\%--85\% of cases.
+
+To assess sensitivity to fixed-grid positivity bounds, we also implemented linear constraints from \citet{pfister2019} on the first eight samples per cell. Under the standard \(D/r\le16\) grid at narrow \(n=500\), the fixed-grid baseline incurs a much higher MISE (\(0.021591\) vs.\ \(0.003025\) for our certified method), and even after expanding its cap to \(D/r\le64\) (reducing MISE to \(0.003855\) at \(n=500\) and \(0.034069\) vs.\ \(0.032107\) at \(n=100\)), it remains pinned at its grid boundary in 87.5\%--100\% of cases. By contrast, our adaptive certificate automatically refines \(D\) without manual grid-range tuning.
+
+Table~\ref{tab:t3} benchmarks the certified estimator against direct Fejér kernel smoothing (tuned over degrees \(\{0,1,2,3,4,6,8,12,16,24,32,48,64,96,128\}\)) across 60 replications in the bimodal and narrow scenarios. The certified projection substantially outperforms direct Fejér smoothing: at \(n=500\), the paired Fejér-minus-certified mean ISE difference is \(0.001745\) (MCSE \(0.000300\)) for bimodal (a 27\% error reduction) and \(0.010170\) (MCSE \(0.001057\)) for narrow (over a three-fold error reduction), confirming that constrained projection eliminates the first-order bias floor of direct Fejér kernel smoothing.
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison with direct Fejér kernel smoothing for bimodal and narrow scenarios: mean ISE over 60 replications}\label{tab:t3}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+Scenario & \(n\) & Certified & Grid repair & SDP & Fejér kernel \\
+\midrule
+Bimodal & 100 & 0.015953 & 0.016438 & 0.015787 & 0.019169 \\
+Bimodal & 500 & 0.004703 & 0.004600 & 0.004593 & 0.006448 \\
+Narrow & 100 & 0.032278 & 0.033621 & 0.033811 & 0.057709 \\
+Narrow & 500 & 0.004510 & 0.004592 & 0.004514 & 0.014680 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+We further examined sensitivity to the stopping tolerance \(\eta\in\{0.02,0.1,0.5,2\}\) across the 480 samples. All 1,920 final fits terminated within \(D\le256r\); in narrow \(n=500\), MISEs vary smoothly as \(0.003846, 0.003908, 0.004695\), and \(0.006759\), while median \(D/r\) across 107 nonzero-degree diagnostics decreases from 16 to 8, 2, and 2. In solver-to-solver comparisons against numerical SDP outputs, nine minor exceedances were observed; verification with a second solver showed all remaining discrepancies were between \(2.76\times10^{-11}\) and \(1.37\times10^{-9}\)---far below the \(2\times10^{-7}\) solver tolerance---and exact rational checks on the 12 regenerated outputs confirmed exact certificate validity in all 12 cases (Appendix~\ref{app:numerical}). Across the 352 main-simulation fits with \(r\ge2\), the median ratio of the Sobolev fixed-inner-class sufficient degree \eqref{eq:degree} to the actual stopping degree \(D\) is \(72.79\) (quartiles \(31.30\) and \(162.61\)); because the uniform direct-gap sufficient degree \eqref{eq:uniformdegree} scales as \(O(n)\) rather than \(O(\sqrt{n})\), actual stopping degrees are even smaller relative to \eqref{eq:uniformdegree}.
+
+Finally, as a follow-up sensitivity evaluation, Table~\ref{tab:t4} compares the penalised fold-averaging rule \eqref{eq:selection} (with \(M=257\) in \eqref{eq:foldbound}) against the worst-case fixed-bound penalty and unpenalised fold averaging on 1,200 independent samples (100 per cell; all 48,000 fold fits succeeded). Replacing the uniform bound \(A_j\) with the localised training-fold bound \(U_{k,j}\) substantially reduces over-penalisation relative to the fixed bound---lowering MISE by nearly 70\% in bimodal \(n=100\) (\(0.045853\) vs.\ \(0.147805\)) and in boundary \(n=500\) (\(0.007869\) vs.\ \(0.026401\))---while preserving exact degree-zero recovery in the uniform scenario. Because the union-bound factor \(t\) and Bernstein constants remain conservative in finite samples, unpenalised fold averaging still yields lower MISE in nonuniform regimes; the localised penalty's primary advantage is tightening the finite-sample penalty while retaining the non-asymptotic oracle guarantee of Proposition~\ref{prop:oracle}.
+
+\begin{table}[htbp]
+\centering
+\caption{Fold-averaged mean ISE for penalty schemes (1,200 independent samples)}\label{tab:t4}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrr}
+\toprule
+Scenario & \(n\) & None & Fixed & Local & Local \(-\) Fixed (MCSE) \\
+\midrule
+Smooth & 100 & 0.011100 & 0.046909 & 0.046909 & 0.000000 (0.000000) \\
+Smooth & 500 & 0.002940 & 0.003790 & 0.003828 & 0.000038 (0.000049) \\
+Bimodal & 100 & 0.016551 & 0.147805 & 0.045853 & \(-0.101952\) (0.004149) \\
+Bimodal & 500 & 0.003940 & 0.026879 & 0.004111 & \(-0.022768\) (0.000230) \\
+Narrow & 100 & 0.028928 & 0.147472 & 0.147472 & 0.000000 (0.000000) \\
+Narrow & 500 & 0.005521 & 0.034658 & 0.032966 & \(-0.001692\) (0.000625) \\
+Boundary & 100 & 0.021708 & 0.137462 & 0.118662 & \(-0.018799\) (0.005669) \\
+Boundary & 500 & 0.005002 & 0.026401 & 0.007869 & \(-0.018532\) (0.000880) \\
+Uniform & 100 & 0.003732 & 0.000000 & 0.000000 & 0.000000 (0.000000) \\
+Uniform & 500 & 0.000497 & 0.000000 & 0.000000 & 0.000000 (0.000000) \\
+Cardioid & 100 & 0.006501 & 0.047588 & 0.039140 & \(-0.008447\) (0.002416) \\
+Cardioid & 500 & 0.001499 & 0.000457 & 0.000734 & 0.000278 (0.000077) \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.3em}
+\footnotesize\textit{Note:} ``Local'' denotes the fold-specific localised upper-bound penalty \eqref{eq:foldbound}; ``Local \(-\) Fixed'' reports paired mean ISE differences with paired MCSE.
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of related circular density estimation and nonnegative trigonometric approximation approaches}\label{tab:compare}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}Xccccc}
+\toprule
+Approach & Nonneg. & Zeros & No SDP & Risk theory & \(O(r/n)\) cert. \\
+\midrule
+Trig.\ density bases \citep{binette2022} & Yes & Via mixtures & Yes & Bayesian & No \\
+Fejér-poly.\ estimation \citep{klar2025} & Yes & Yes & Yes & Frequentist & No \\
+SDP trig.\ approx.\ (related; \citealp{siem2008}) & Yes & Yes & No & Not studied & No \\
+Grid bounds (adapted; \citealp{pfister2019}) & Yes & Yes & Yes & Not studied & No \\
+\textbf{Certified projection (this paper)} & \textbf{Yes*} & \textbf{Yes} & \textbf{Yes} & \textbf{Frequentist} & \textbf{Yes*} \\
+\bottomrule
+\end{tabularx}
+
+\vspace{0.3em}
+\footnotesize\textit{Note:} *Holds rigorously in exact arithmetic (Propositions~\ref{prop:classes} and~\ref{prop:certificate}); numerical implementation verifies feasibility and residuals in floating-point arithmetic. ``Zeros'' indicates whether the framework accommodates densities vanishing on the circle.
+\end{table}
+
+The remainder of the paper is organised as follows. Section~\ref{sec:model} introduces the certified projection model and stopping rule. Section~\ref{sec:risk} establishes fixed-degree, Sobolev, and cross-validation risk bounds. Section~\ref{sec:sim} presents simulation comparisons against full SDP, grid-repair, and direct Fejér kernel baselines. Section~\ref{sec:app} illustrates a computational extension to grouped hourly bike-sharing data, and Section~\ref{sec:discussion} concludes. The notation is summarised in Appendix~\ref{app:notation}.
+
+\section{Model and computable projection certificates}\label{sec:model}
+\subsection{Nonnegative densities and inner and outer approximations}
+Let \(X_1,\dots,X_n\) be independent and identically distributed continuous observations on the circle \([0,2\pi)\), such as directional measurements or periodic event times. To avoid both the negative values of truncated Fourier series and the first-order bias floor of direct Fejér kernel smoothing, we project the empirical Fourier coefficients onto the compact convex set of nonnegative trigonometric densities of degree \(r\) (the normalised slice of the nonnegative trigonometric polynomial cone with constant Fourier coefficient fixed at one). For an integer \(r\ge1\) and complex coefficients \(a_\ell\), define
+\begin{equation}
+f_z(\theta)=\frac1{2\pi}\left\{1+2\operatorname{Re}\sum_{\ell=1}^r a_\ell e^{i\ell\theta}\right\},\quad
+z=(\operatorname{Re}a_1,\ldots,\operatorname{Re}a_r,\operatorname{Im}a_1,\ldots,\operatorname{Im}a_r)^\top .
+\label{eq:density}
+\end{equation}
+Write \(q_z(\theta)=2\pi f_z(\theta)\) and let \(\mathcal K_r=\{z\in\mathbb R^{2r}: f_z(\theta)\ge0,\ 0\le\theta<2\pi\}\). Equation~\eqref{eq:density} integrates to one, so each element of \(\mathcal K_r\) defines a density. Its coefficients satisfy \(|a_\ell|\le1\), and \(\mathcal K_r\) is therefore compact and convex. Let \(\hat a_\ell=n^{-1}\sum_j e^{-i\ell X_j}\) be the empirical Fourier coefficients, and arrange their real and imaginary parts in the order in \eqref{eq:density} to form \(c\). The target projection is
+\begin{equation}
+z^*=\arg\min_{z\in\mathcal K_r}J(z),\qquad J(z)=\tfrac12\|z-c\|_2^2.
+\label{eq:projection}
+\end{equation}
+Take a representation degree \(D\ge r\), \(L=2D+1\) nodes \(\phi_k=2\pi k/L\), and \(t_\ell=1-\ell/(D+1)\). Write
+\begin{equation}
+(A_Iz)_k=2\operatorname{Re}\sum_{\ell=1}^r\frac{a_\ell}{t_\ell}e^{i\ell\phi_k},\qquad
+(A_Oz)_k=2\operatorname{Re}\sum_{\ell=1}^ra_\ell e^{i\ell\phi_k}.
+\label{eq:matrices}
+\end{equation}
+Define the inner class \(C_{r,D}=\{z:\mathbf1+A_Iz\ge0\}\) and the outer class \(O_{r,D}=\{z:\mathbf1+A_Oz\ge0\}\), with inequalities interpreted componentwise.
+
+\begin{proposition}\label{prop:classes}
+For every \(D\ge r\), \(C_{r,D}\subseteq\mathcal K_r\subseteq O_{r,D}\). The inner constraints are sufficient, but generally not necessary, for global nonnegativity.
+\end{proposition}
+\begin{proof}
+For \(z\in C_{r,D}\), set \(p_k=[1+(A_Iz)_k]/L\ge0\). Write \(d_0=1\), \(d_m=a_m/t_m\) and \(d_{-m}=\overline{a_m}/t_m\) for \(1\le m\le r\). For \(0\le\ell\le D\), orthogonality of roots of unity gives
+\[
+\sum_{k=0}^{L-1}p_ke^{-i\ell\phi_k}
+=\sum_{m=-r}^{r}d_m\left(\frac1L\sum_{k=0}^{L-1}e^{i(m-\ell)\phi_k}\right).
+\]
+Since \(|m-\ell|\le r+D\le2D<L\), the parenthesised term equals one only when \(m=\ell\), and zero otherwise. Thus \(\sum_kp_k=1\); for \(1\le\ell\le r\) the sum is \(a_\ell/t_\ell\), and for \(r<\ell\le D\) it is zero. The normalised Fejér kernel is
+\begin{equation}
+K_D(\theta)=\frac{1}{2\pi(D+1)}\left|\sum_{j=0}^De^{ij\theta}\right|^2,
+\label{eq:fejer}
+\end{equation}
+whose \(\ell\)th Fourier multiplier is \(t_\ell\). Hence \(f_z=\sum_k p_kK_D(\theta-\phi_k)\ge0\). Conversely, a function that is nonnegative everywhere is nonnegative at the nodes, so \(\mathcal K_r\subseteq O_{r,D}\).
+\end{proof}
+
+Geometrically, the inner-class construction rests on the triangular weights of a geometric square: for \(Q_\beta(1,z)=\sum_{j=0}^{D}(\beta z)^j\) with \(z=e^{i\theta}\) and \(\beta=e^{-i\phi}\), \(|Q_\beta(1,z)|^2/[2\pi(D+1)]\) is the shifted Fejér kernel in \eqref{eq:fejer}, whose multiplicities produce the multipliers \(t_\ell\). The output \(z_I\) is obtained as a numerical solution of \(\min_{z\in C_{r,D}}J(z)\); sampling the inverse-multiplier polynomial ensures global nonnegativity between nodes, whereas checking the original density only at the nodes does not.
+
+Existing grid certificates and our inner class are non-nested. For example, let \(r=1,D=8,L=17\) and \(q(\theta)=1-0.92\cos\theta\). The inverse-Fejér node value at \(\theta=0\) is \(1-0.92/(8/9)<0\), so the polynomial lies outside \(C_{r,D}\), whereas the grid bound of \citet{pfister2019} with \(C=(1-2/17)^{-1/2}\), node minimum \(B=0.08\), and maximum \(A\le1.92\) satisfies \((C+1)B-(C-1)A>0\). However, pairing our linear inner class with outer constraints and a dual lower bound yields an adaptive \(O(r/n)\) stopping certificate that avoids the sensitivity of fixed-grid bounds to the candidate \(D/r\) range (see Section~\ref{sec:sim}).
+
+\subsection{Error bounds and stopping rule}
+For any \(\lambda\ge0\), the dual function of the outer-constrained problem and its associated ball centre are
+\begin{equation}
+g(\lambda)=-\tfrac12\|A_O^\top\lambda\|^2-\lambda^\top(\mathbf1+A_Oc),\qquad v=c+A_O^\top\lambda.
+\label{eq:dual}
+\end{equation}
+Weak duality gives \(g(\lambda)\le\min_{O_{r,D}}J\le J(z^*)\). For any \(z_o\in O_{r,D}\), with coefficients \(b_\ell\), define
+\begin{equation}
+\begin{aligned}
+m_g &= \min_k\{1+(A_Oz_o)_k\}, & \beta &= \frac{\pi^2}{L^2}\sum_{\ell=1}^r \ell^2|b_\ell|,\\
+\delta &= \max(0,\beta-m_g), & z_R &= \frac{z_o}{1+\delta}.
+\end{aligned}
+\label{eq:repair}
+\end{equation}
+Outer feasibility gives \(m_g\ge0\) and \(0\le\delta\le\beta\). The node values are nonnegative and have discrete average one. Discrete orthogonality then gives \(|b_\ell|\le1\), whence
+\[
+\beta\le\frac{\pi^2 r(r+1)(2r+1)}{6(2D+1)^2}.
+\]
+For fixed \(r\), this bound decreases as \(O(D^{-2})\). If the outer point is near the boundary or the grid is coarse, the correction can make the ball bound loose. The direct gap bound does not use the corrected point; taking the minimum cannot be worse than using the direct bound alone.
+
+At a global minimiser \(\theta^*\), \(q'_{z_o}(\theta^*)=0\), and the nearest node is at distance at most \(\pi/L\). Since \(\|q_{z_o}''\|_\infty\le2\sum_{\ell=1}^r\ell^2|b_\ell|\), Taylor's theorem applied between the minimiser and its nearest node gives \(q_{z_o}(\theta^*)\ge m_g-\beta\), and hence \(z_R\in\mathcal K_r\). Let \(U_I=J(z_I)\) and \(U_R=J(z_R)\).
+
+\begin{proposition}\label{prop:certificate}
+If \(z_I\in C_{r,D}\), \(z_o\in O_{r,D}\), and \(\lambda\ge0\), then
+\begin{equation}
+\|f_{z_I}-f_{z^*}\|_{L^2}^2\le E_D
+=\frac1\pi\min\left\{2(U_I-g),\ \left[\|z_I-v\|+\sqrt{2(U_R-g)}\right]^2\right\}.
+\label{eq:certificate}
+\end{equation}
+\end{proposition}
+\begin{proof}
+The projection variational inequality gives \(J(z_I)-J(z^*)\ge\|z_I-z^*\|^2/2\); the first bound follows from \(g\le J(z^*)\). For any \(z\in\mathcal K_r\), completing the square yields \(J(z)\ge g+\|z-v\|^2/2\). Since \(J(z^*)\le U_R\), the point \(z^*\) lies in the ball centred at \(v\) with radius \(\sqrt{2(U_R-g)}\); the triangle inequality yields the second bound. Parseval's identity gives \(\|f_z-f_w\|_{L^2}^2=\|z-w\|^2/\pi\).
+\end{proof}
+
+The result applies to any feasible inner and outer points and any nonnegative multiplier; exact optimisation is unnecessary. For \(\eta>0\), the algorithm starts at \(D=2r\) and doubles \(D\) until \(E_D\le\eta r/(\pi n)\) (returning the uniform density for \(r=0\)). Because both classes approximate \(\mathcal K_r\) for fixed \(r\), the procedure terminates in finite steps under exact optimisation (even though the inner classes need not be nested across doublings).
+
+To keep the theoretical and numerical layers distinct, note that Proposition~\ref{prop:certificate} provides a rigorous \emph{theoretical certificate} in exact arithmetic. In our numerical implementation, we compute a floating-point evaluation of this certificate by solving the inner and outer quadratic programmes via SLSQP (capped at \(D\le256r\)) and recovering a nonnegative dual multiplier via nonnegative least squares on active constraints; node slack, stationarity residuals, and the stopping threshold are checked at each step, with small numerical violations repaired by shrinkage towards the uniform density (Appendix~\ref{app:numerical}). Rigorous machine-verifiable certification via interval arithmetic or outward rounding is left for future work.
+
+\section{Statistical risk and representation degree}\label{sec:risk}
+\subsection{Fixed-degree risk based on the a posteriori certificate}
+Let \(f\in L^2\) be the true circular density and let \(\mathcal F_r=\{f_z:z\in\mathcal K_r\}\). Expectations below are over independent and identically distributed observations, and \(r\) is fixed before observing the data.
+\begin{proposition}\label{prop:fixedrisk}
+Suppose \(\eta\ge0\) and the computation satisfies \(E_D\le\eta r/(\pi n)\) for every sample. Then, for every \(\epsilon>0\),
+\begin{equation}\label{eq:fixedrisk}
+\mathbb E\|f_{z_I}-f\|_2^2\le(1+\epsilon)\operatorname{dist}(f,\mathcal F_r)^2+
+\left[(1+\epsilon)+(1+\epsilon^{-1})\eta\right]\frac{r}{\pi n}.
+\end{equation}
+\end{proposition}
+\begin{proof}
+Let \(b\) be the vector of the first \(r\) true Fourier coefficients and \(e=c-b\) the empirical error. For any \(w\in\mathcal K_r\), set \(d=z^*-w\). The projection inequality and \(2e^\top d-\|d\|^2\le\|e\|^2\) give
+\[\|z^*-b\|^2\le\|w-b\|^2+\|e\|^2.\]
+Combining this with the Fourier tail and \(\mathbb E\|e\|^2=\sum_{\ell=1}^r(1-|a_\ell(f)|^2)/n\le r/n\), the risk of the full projection is at most \(\operatorname{dist}(f,\mathcal F_r)^2+r/(\pi n)\). The inequality \(\|u+v\|^2\le(1+\epsilon)\|u\|^2+(1+\epsilon^{-1})\|v\|^2\), together with the samplewise certificate, gives \eqref{eq:fixedrisk}.
+\end{proof}
+Equation~\eqref{eq:fixedrisk} permits \(D\) to be refined adaptively using the same data, because the certificate holds samplewise.
+
+\subsection{Densities with zeros and a fixed representation degree}
+Let \(a_\ell(f)=\int_0^{2\pi}e^{-i\ell\theta}f(\theta)d\theta\), and suppose that, for \(0<s\le2\),
+\begin{equation}\label{eq:sobolev}
+\sum_{\ell\ge1}\ell^{2s}|a_\ell(f)|^2\le R^2.
+\end{equation}
+A positive Jackson-type convolution constructed from the squared Fejér kernel yields \(g_r\in\mathcal F_r\) with \(\|f-g_r\|_2^2\le C_sR^2r^{-2s}\), for \(r\ge2\). This construction uses only \(f\ge0\) and requires no strictly positive lower bound. To distinguish data-dependent stopping from a prespecified representation degree, consider exact projection onto \(C_{r,D}\) with \(D\) fixed before sampling.
+\begin{proposition}\label{prop:sobolev}
+If \(r\ge2\), \(\eta>0\), and
+\begin{equation}\label{eq:degree}
+D\ge\max\left\{2r,\ r-1+\left\lceil r(r+1)\sqrt{2n/\eta}\right\rceil\right\},
+\end{equation}
+then the corresponding inner-class projection estimator satisfies
+\begin{equation}\label{eq:sobolevrisk}
+\mathbb E\|f_{z_I}-f\|_2^2\le2C_sR^2r^{-2s}+\frac{(1+\eta)r}{\pi n}.
+\end{equation}
+\end{proposition}
+\begin{proof}
+Let \(u=(2\pi)^{-1}\) and \(\alpha=r(r+1)/(D+1-r)\). For \(g\in\mathcal F_r\), write \(z_g\) for its coefficient vector. Since \(q_{z_g}(\phi_k)\ge0\) and \(|a_\ell(g)|\le1\), at each node
+\[
+\begin{aligned}
+1+(A_Iz_g)_k &\ge -2\sum_{\ell=1}^r\left(\frac1{t_\ell}-1\right)|a_\ell(g)|\\
+&=-2\sum_{\ell=1}^r\frac{\ell|a_\ell(g)|}{D+1-\ell}
+\ge-\frac{2}{D+1-r}\sum_{\ell=1}^r\ell|a_\ell(g)|\ge-\alpha.
+\end{aligned}
+\]
+Hence \((g+\alpha u)/(1+\alpha)\) belongs to the inner class. Denote this shrunken density by \(h\). Parseval's identity and \(|a_\ell(g)|\le1\) give
+\[
+\|h-g\|_2^2=\left(\frac{\alpha}{1+\alpha}\right)^2
+\frac1\pi\sum_{\ell=1}^{r}|a_\ell(g)|^2\le\frac{r\alpha^2}{\pi}.
+\]
+Using \((a+b)^2\le2a^2+2b^2\) with the \(g_r\) above gives
+\[\operatorname{dist}(f,C_{r,D})^2\le2C_sR^2r^{-2s}+2r\alpha^2/\pi.\]
+Equation~\eqref{eq:degree} implies \(\alpha^2\le\eta/(2n)\), so the second term is at most \(\eta r/(\pi n)\). Projection risk on a fixed closed convex inner class is at most this approximation error plus \(r/(\pi n)\), yielding \eqref{eq:sobolevrisk}. Here \(\operatorname{dist}(f,C_{r,D})\) denotes the \(L^2\) distance to the corresponding density class.
+\end{proof}
+When \(s\) is known and \(r\asymp n^{1/(2s+1)}\), \eqref{eq:sobolevrisk} attains the standard Sobolev minimax rate \(n^{-2s/(2s+1)}\), and the sufficient condition \eqref{eq:degree} depends only on \(r,n,\eta\) without estimating unknown \(s,R\). Note that Proposition~\ref{prop:sobolev} applies to exact projection onto \(C_{r,D}\) at a prespecified \(D\), whereas Proposition~\ref{prop:fixedrisk} governs the data-adaptive doubling rule at fixed \(r\). When \(r=1\) and \(f=(1-\cos\theta)/(2\pi)\), the inner constraint at \(\phi_0=0\) and a point attaining equality yield squared approximation error \(1/[4\pi(D+1)^2]\), which is at most \(\eta/(\pi n)\) if and only if \(D+1\ge\sqrt{n/(4\eta)}\), giving the exact representation scale for this vanishing density.
+
+For the \emph{a posteriori} certificate in Proposition~\ref{prop:certificate}, a uniform \emph{a priori} sufficient condition is \(D\ge2r\) and
+\begin{equation}\label{eq:uniformdegree}
+D+1-r\ge\frac{8nr(r+1)}\eta,\quad
+2D+1\ge\pi\sqrt{\frac{8n}{\eta}\frac{r(r+1)(2r+1)}6}.
+\end{equation}
+Under exact inner, outer, and dual solves, \eqref{eq:uniformdegree} guarantees that the direct gap bound is at most \(\eta r/(\pi n)\) (see Appendix~\ref{app:direct}). Because both the Sobolev fixed-inner-class sufficient degree \eqref{eq:degree} (scaling as \(O(\sqrt{n})\)) and the uniform direct-gap sufficient degree \eqref{eq:uniformdegree} (scaling as \(O(n)\)) are highly conservative, the sample-specific \emph{a posteriori} certificate in Proposition~\ref{prop:certificate} is essential in practice: in Section~\ref{sec:sim}, actual stopping degrees are typically over 70 times smaller than the Sobolev sufficient degree \eqref{eq:degree} (and smaller still relative to the \(O(n)\) direct-gap bound \eqref{eq:uniformdegree}).
+
+\subsection{Risk bound for penalised fold selection and model averaging}
+Data-dependent penalties and oracle analysis of cross-validation have been studied by \citet{lerasle2012} and \citet{arlot2016}. We give a sufficient bound for the present nonnegative candidate family that permits the penalty to adapt to training-fold density bounds. Partition the iid data in advance into \(K\ge2\) folds of equal size \(m=n/K\). Candidate degrees \(r_1,\ldots,r_J\) are prespecified. Let \(g_{k,j}\) be the nonnegative normalised density of degree at most \(r_j\) trained on all but fold \(k\). Set \(A_j=(r_j+1)/(2\pi)\), \(A_{\max}=\max_j A_j\), and \(t=\log(KJ^2n^2)\). If \(U_{k,j}\) depends only on the training data for fold \(k\) and satisfies \(\|g_{k,j}\|_\infty\le U_{k,j}\le A_j\), let \(\overline U_j=K^{-1}\sum_kU_{k,j}\). For validation loss \(\gamma_k(g)=\int g^2-2m^{-1}\sum_{i\in I_k}g(X_i)\), choose
+\begin{equation}\label{eq:selection}
+\hat j=\arg\min_j\left\{\frac1K\sum_{k=1}^K\gamma_k(g_{k,j})+\frac{2\overline U_jt}{3m}\right\},\qquad
+\overline g_{\hat j}=\frac1K\sum_{k=1}^K g_{k,\hat j}.
+\end{equation}
+\begin{proposition}\label{prop:oracle}
+If \(\|f\|_\infty\le B\), then for every \(0<\epsilon<1\),
+\begin{equation}\label{eq:oracle}
+\begin{aligned}
+\mathbb E\|\overline g_{\hat j}-f\|_2^2\le\min_j\bigg\{&
+\frac{1+\epsilon}{1-\epsilon}\frac1K\sum_{k=1}^K\mathbb E\|g_{k,j}-f\|_2^2\\
+&+\frac{4Bt}{\epsilon m(1-\epsilon)}+\frac{4t\,\mathbb E\overline U_j}{3m(1-\epsilon)}\bigg\}
++\frac{2(A_{\max}+B)}{n^2}.
+\end{aligned}
+\end{equation}
+\end{proposition}
+A computable training-fold bound uses the maximum on equally spaced nodes and a second-order remainder. Let \(q_{k,j}=2\pi g_{k,j}\); under our convention its \(\ell\)th Fourier coefficient is \(a_{k,j,\ell}=\int g_{k,j}(\theta)e^{-i\ell\theta}d\theta=(2\pi)^{-1}\int q_{k,j}(\theta)e^{-i\ell\theta}d\theta\). For a prespecified number of nodes \(M\), set
+\begin{equation}\label{eq:foldbound}
+U_{k,j}=\min\left\{A_j,\ \frac1{2\pi}\left[
+\max_{0\le h<M}q_{k,j}(2\pi h/M)+\frac{\pi^2}{M^2}\sum_{\ell=1}^{r_j}\ell^2|a_{k,j,\ell}|\right]\right\}.
+\end{equation}
+At a continuous maximum the first derivative vanishes and the nearest node is at distance at most \(\pi/M\); hence \eqref{eq:foldbound} is an upper bound in exact arithmetic. The coefficient \(2/3\) in \eqref{eq:selection} comes from the linear remainder in Bernstein's inequality in Appendix~\ref{app:oracle} and cancellation in the selection inequality. Taking \(U_{k,j}=A_j\) recovers the fixed-upper-bound method; \eqref{eq:foldbound} is at most \(A_j\), so the corresponding theoretical upper bound in \eqref{eq:oracle} does not increase. Equation~\eqref{eq:foldbound} holds for any prespecified positive integer \(M\); increasing \(M\) can reduce the second-order remainder for given coefficients at the cost of more node evaluations. The simulations use \(M=257\). The proof is in Appendix~\ref{app:oracle}.
+
+Fix \(K\ge2\), \(\eta>0\), \(0<\epsilon<1\), and let \(n_{\mathrm{tr}}=n-m\). Suppose that every fold candidate meets the samplewise certificate required for \eqref{eq:fixedrisk} at threshold \(\eta r_j/(\pi n_{\mathrm{tr}})\), and that \(f\) satisfies \eqref{eq:sobolev} with \(s\in(1/2,2]\). Equation~\eqref{eq:sobolev} and Cauchy--Schwarz imply \(\|f\|_\infty<\infty\). Taking a doubling candidate grid covering up to \(\lfloor\sqrt n\rfloor\) gives \(J=O(\log n)\) and \(t=O(\log n)\) for fixed \(K\). Combining \eqref{eq:fixedrisk}, Appendix~\ref{app:kernel}, and \(\overline U_j\le A_j=O(r_j+1)\) with \(r_j\asymp(n/\log n)^{1/(2s+1)}\) yields the adaptive risk rate \(O((\log n/n)^{2s/(2s+1)})\) while allowing zeros of \(f\).
+
+Because \(A_j\) bounds the worst-case supremum over all nonnegative densities of degree \(r_j\), the fixed-bound penalty is conservative in finite samples. Equation~\eqref{eq:foldbound} tightens this penalty using the fitted training-fold density while preserving the non-asymptotic oracle guarantee in Proposition~\ref{prop:oracle}. We emphasise that Proposition~\ref{prop:oracle} applies specifically to the fold-averaged estimator \(\overline g_{\hat j}\) (evaluated in Table~\ref{tab:t4}), whereas the main simulations in Tables~\ref{tab:t1} and~\ref{tab:t3} evaluate standard unpenalised five-fold selection followed by full-sample refitting, which is a distinct estimation procedure.
+
+\section{Simulation studies}\label{sec:sim}
+\subsection{Design}
+We use six density scenarios: the uniform distribution; the cardioid with a zero, \((1+\cos(\theta-0.7))/(2\pi)\); and four von Mises or mixture densities. Writing \((w,\mu,\kappa)\) for component weight, location and concentration, the smooth scenario is \((1,0.7,2)\), bimodal is \((0.6,0.5,4)+(0.4,3.4,7)\), narrow is \((1,0.73,20)\), and boundary-crossing is \((0.7,0.03,10)+(0.3,3.2,3)\). Sample sizes are \(n=100,500\), with 40 replications per cell and 480 samples in total. For each sample, the three methods share random five-fold splits, select their parameters independently by validation loss, and refit on the full sample.
+
+The direct Fejér kernel density estimator is \(\widehat f_d=n^{-1}\sum_{i=1}^{n}K_d(\theta-X_i)\), with \(\ell\)th coefficient \((1-\ell/(d+1))\hat a_\ell\) for \(1\le\ell\le d\). It constructs a density directly by averaging a nonnegative kernel, shrinking low-order empirical coefficients by positive multipliers. Our method instead projects empirical coefficients under nonnegativity constraints and uses inverse multipliers to construct a feasible inner class and an \emph{a posteriori} bound relative to the full projection, avoiding the first-order bias floor of direct kernel smoothing.
+
+The methods compared are: (1) the certified method, with \(\eta=0.1\) and \(D\) adjusted by \eqref{eq:certificate}; (2) grid repair, which projects on the outer grid, repairs by \eqref{eq:repair}, and independently selects \(D/r\in\{2,4,8,16\}\); and (3) the full nonnegative trigonometric-polynomial SDP projection. All three use candidate statistical degrees \(\{0,1,2,3,4,6,8,12\}\). The validation loss for each candidate is \(\int_{-\pi}^{\pi}\hat f(\theta)^2\,d\theta-2n_v^{-1}\sum_{j\in V}\hat f(X_j)\), weighted by validation-fold sample size. The true density is used only for final integrated squared error (ISE), not tuning. Simulation ISE is evaluated via Parseval's identity with true Fourier coefficients truncated at degree 256 (whose omitted Bessel-series tail is below \(10^{-500}\), well below machine precision and identical across methods). For \(r=0,1\), the SDP uses analytical solutions; otherwise it uses SCS or a feasibility shortcut, with numerical negative eigenvalues truncated and trace normalised.
+
+\subsection{Results}
+Table~\ref{tab:t1} reports the mean ISE (MISE) over 40 replications across all six scenarios (complete Monte Carlo standard errors are provided in the supplementary repository).
+
+\begin{table}[htbp]
+\centering
+\caption{Mean integrated squared error (MISE) by scenario over 40 replications, with Monte Carlo standard errors (MCSE) in parentheses}\label{tab:t1}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lrrrrr}
+\toprule
+Scenario & \(n\) & Certified (MCSE) & Grid repair & SDP & Cert \(-\) SDP (MCSE) \\
+\midrule
+Smooth & 100 & 0.010473 (0.001419) & 0.011988 & 0.010646 & \(-0.000173\) (0.000412) \\
+Smooth & 500 & 0.002893 (0.000410) & 0.003104 & 0.003084 & \(-0.000191\) (0.000094) \\
+Bimodal & 100 & 0.016432 (0.001874) & 0.016728 & 0.015587 & \(+0.000845\) (0.000782) \\
+Bimodal & 500 & 0.004930 (0.000408) & 0.004734 & 0.004726 & \(+0.000204\) (0.000149) \\
+Narrow & 100 & 0.033245 (0.003007) & 0.034185 & 0.034418 & \(-0.001173\) (0.001074) \\
+Narrow & 500 & 0.003908 (0.000557) & 0.003934 & 0.003849 & \(+0.000059\) (0.000048) \\
+Boundary-crossing & 100 & 0.023749 (0.002843) & 0.023262 & 0.023740 & \(+0.000009\) (0.000610) \\
+Boundary-crossing & 500 & 0.004732 (0.000425) & 0.004922 & 0.004775 & \(-0.000043\) (0.000065) \\
+Uniform & 100 & 0.005174 (0.001229) & 0.005927 & 0.005220 & \(-0.000046\) (0.000046) \\
+Uniform & 500 & 0.000330 (0.000112) & 0.000330 & 0.000330 & \(0.000000\) (0.000000) \\
+Cardioid with zero & 100 & 0.008861 (0.002495) & 0.007693 & 0.008326 & \(+0.000536\) (0.000846) \\
+Cardioid with zero & 500 & 0.001713 (0.000410) & 0.001611 & 0.001623 & \(+0.000090\) (0.000042) \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[htbp]
+\centering
+\caption{Representation degree and smaller bound at stopping}\label{tab:t2}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lrrrrrr}
+\toprule
+Scenario & \(n\) & Fits & \(D/r\) median (Q1, Q3) & Direct & Ball & Tie \\
+\midrule
+Smooth & 100 & 40 & 8(4,10) & 67.5\% & 32.5\% & 0.0\% \\
+Smooth & 500 & 40 & 4(2,8) & 97.5\% & 2.5\% & 0.0\% \\
+Bimodal & 100 & 40 & 8(8,16) & 40.0\% & 60.0\% & 0.0\% \\
+Bimodal & 500 & 40 & 6(4,16) & 62.5\% & 37.5\% & 0.0\% \\
+Narrow & 100 & 40 & 12(8,32) & 62.5\% & 37.5\% & 0.0\% \\
+Narrow & 500 & 40 & 8(8,8) & 95.0\% & 5.0\% & 0.0\% \\
+Boundary & 100 & 40 & 8(4,8) & 75.0\% & 25.0\% & 0.0\% \\
+Boundary & 500 & 40 & 8(4,16) & 75.0\% & 25.0\% & 0.0\% \\
+Uniform & 100 & 16 & 2(2,2) & 6.2\% & 0.0\% & 93.8\% \\
+Uniform & 500 & 10 & 2(2,2) & 0.0\% & 0.0\% & 100.0\% \\
+Cardioid & 100 & 40 & 16(7,32) & 55.0\% & 45.0\% & 0.0\% \\
+Cardioid & 500 & 40 & 32(8,64) & 55.0\% & 42.5\% & 2.5\% \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.3em}
+\footnotesize\textit{Note:} Proportions are over nonzero-degree fits (excluding 54 zero-degree fits with no \(D/r\)); Q1 and Q3 use linear interpolation, and bounds are counted as tied when their difference is at most \(10^{-12}\) times the larger bound.
+\end{table}
+
+Table~\ref{tab:t2} reports an \emph{a posteriori} replay of the 480 final fits from Table~\ref{tab:t1} (\(\eta=0.1\)). Among the 426 nonzero-degree fits, the direct bound is smaller 275 times, the ball bound 125 times, and 26 are ties; notably, in 46 cases the ball bound reaches the stopping threshold while the direct bound does not, highlighting their complementary role in stopping.
+
+Across all six scenarios in Table~\ref{tab:t1}, the certified estimator closely matches full SDP projection: for instance, the paired certified-minus-SDP mean ISE difference is \(-0.0001731\) (paired MCSE \(0.0004122\)) for smooth \(n=100\) and \(0.0008455\) (paired MCSE \(0.0007821\)) for bimodal \(n=100\). In the concentrated narrow scenario (\(\kappa=20\)), Fourier truncation requires higher frequencies---the eighth von Mises Fourier coefficient \(I_8(\kappa)/I_0(\kappa)\) is \(0.198\) at \(\kappa=20\) versus \(1.2\times10^{-5}\) at \(\kappa=2\)---so all three methods select the boundary \(r=12\) at \(n=500\). Expanding the candidate degree cap to 24 increases the selection variance of unpenalised cross-validation at moderate sample size (raising mean ISE on the 40 samples from \(0.003908\) to \(0.005959\) for certified and \(0.003849\) to \(0.005964\) for SDP), yet preserves near-identical accuracy between the two methods (paired mean difference \(-5.06\times10^{-6}\), MCSE \(5.28\times10^{-5}\)). On 20 independent narrow samples with expanded caps (\(r\le24\), grid-repair \(D/r\le32\)), certified, grid-repair, and SDP MISEs are \(0.030244, 0.029315, 0.029432\) (\(n=100\)) and \(0.007108, 0.007327, 0.007038\) (\(n=500\)), with grid repair still hitting its \(D/r=32\) cap in 70\%--85\% of cases.
+
+To assess sensitivity to fixed-grid positivity bounds, we also implemented linear constraints from \citet{pfister2019} on the first eight samples per cell. Under the standard \(D/r\le16\) grid at narrow \(n=500\), the fixed-grid baseline incurs a much higher MISE (\(0.021591\) vs.\ \(0.003025\) for our certified method), and even after expanding its cap to \(D/r\le64\) (reducing MISE to \(0.003855\) at \(n=500\) and \(0.034069\) vs.\ \(0.032107\) at \(n=100\)), it remains pinned at its grid boundary in 87.5\%--100\% of cases. By contrast, our adaptive certificate automatically refines \(D\) without manual grid-range tuning.
+
+Table~\ref{tab:t3} benchmarks the certified estimator against direct Fejér kernel smoothing (tuned over degrees \(\{0,1,2,3,4,6,8,12,16,24,32,48,64,96,128\}\)) across 60 replications in the bimodal and narrow scenarios. The certified projection substantially outperforms direct Fejér smoothing: at \(n=500\), the paired Fejér-minus-certified mean ISE difference is \(0.001745\) (MCSE \(0.000300\)) for bimodal (a 27\% error reduction) and \(0.010170\) (MCSE \(0.001057\)) for narrow (over a three-fold error reduction), confirming that constrained projection eliminates the first-order bias floor of direct Fejér kernel smoothing.
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison with direct Fejér kernel smoothing for bimodal and narrow scenarios: mean ISE over 60 replications}\label{tab:t3}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+Scenario & \(n\) & Certified & Grid repair & SDP & Fejér kernel \\
+\midrule
+Bimodal & 100 & 0.015953 & 0.016438 & 0.015787 & 0.019169 \\
+Bimodal & 500 & 0.004703 & 0.004600 & 0.004593 & 0.006448 \\
+Narrow & 100 & 0.032278 & 0.033621 & 0.033811 & 0.057709 \\
+Narrow & 500 & 0.004510 & 0.004592 & 0.004514 & 0.014680 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+We further examined sensitivity to the stopping tolerance \(\eta\in\{0.02,0.1,0.5,2\}\) across the 480 samples. All 1,920 final fits terminated within \(D\le256r\); in narrow \(n=500\), MISEs vary smoothly as \(0.003846, 0.003908, 0.004695\), and \(0.006759\), while median \(D/r\) across 107 nonzero-degree diagnostics decreases from 16 to 8, 2, and 2. In solver-to-solver comparisons against numerical SDP outputs, nine minor exceedances were observed; verification with a second solver showed all remaining discrepancies were between \(2.76\times10^{-11}\) and \(1.37\times10^{-9}\)---far below the \(2\times10^{-7}\) solver tolerance---and exact rational checks on the 12 regenerated outputs confirmed exact certificate validity in all 12 cases (Appendix~\ref{app:numerical}). Across the 352 main-simulation fits with \(r\ge2\), the median ratio of the Sobolev fixed-inner-class sufficient degree \eqref{eq:degree} to the actual stopping degree \(D\) is \(72.79\) (quartiles \(31.30\) and \(162.61\)); because the uniform direct-gap sufficient degree \eqref{eq:uniformdegree} scales as \(O(n)\) rather than \(O(\sqrt{n})\), actual stopping degrees are even smaller relative to \eqref{eq:uniformdegree}.
+
+Finally, as a follow-up sensitivity evaluation, Table~\ref{tab:t4} compares the penalised fold-averaging rule \eqref{eq:selection} (with \(M=257\) in \eqref{eq:foldbound}) against the worst-case fixed-bound penalty and unpenalised fold averaging on 1,200 independent samples (100 per cell; all 48,000 fold fits succeeded). Replacing the uniform bound \(A_j\) with the localised training-fold bound \(U_{k,j}\) substantially reduces over-penalisation relative to the fixed bound---lowering MISE by nearly 70\% in bimodal \(n=100\) (\(0.045853\) vs.\ \(0.147805\)) and in boundary \(n=500\) (\(0.007869\) vs.\ \(0.026401\))---while preserving exact degree-zero recovery in the uniform scenario. Because the union-bound factor \(t\) and Bernstein constants remain conservative in finite samples, unpenalised fold averaging still yields lower MISE in nonuniform regimes; the localised penalty's primary advantage is tightening the finite-sample penalty while retaining the non-asymptotic oracle guarantee of Proposition~\ref{prop:oracle}.
+
+\begin{table}[htbp]
+\centering
+\caption{Fold-averaged mean ISE for penalty schemes (1,200 independent samples)}\label{tab:t4}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrr}
+\toprule
+Scenario & \(n\) & None & Fixed & Local & Local \(-\) Fixed (MCSE) \\
+\midrule
+Smooth & 100 & 0.011100 & 0.046909 & 0.046909 & 0.000000 (0.000000) \\
+Smooth & 500 & 0.002940 & 0.003790 & 0.003828 & 0.000038 (0.000049) \\
+Bimodal & 100 & 0.016551 & 0.147805 & 0.045853 & \(-0.101952\) (0.004149) \\
+Bimodal & 500 & 0.003940 & 0.026879 & 0.004111 & \(-0.022768\) (0.000230) \\
+Narrow & 100 & 0.028928 & 0.147472 & 0.147472 & 0.000000 (0.000000) \\
+Narrow & 500 & 0.005521 & 0.034658 & 0.032966 & \(-0.001692\) (0.000625) \\
+Boundary & 100 & 0.021708 & 0.137462 & 0.118662 & \(-0.018799\) (0.005669) \\
+Boundary & 500 & 0.005002 & 0.026401 & 0.007869 & \(-0.018532\) (0.000880) \\
+Uniform & 100 & 0.003732 & 0.000000 & 0.000000 & 0.000000 (0.000000) \\
+Uniform & 500 & 0.000497 & 0.000000 & 0.000000 & 0.000000 (0.000000) \\
+Cardioid & 100 & 0.006501 & 0.047588 & 0.039140 & \(-0.008447\) (0.002416) \\
+Cardioid & 500 & 0.001499 & 0.000457 & 0.000734 & 0.000278 (0.000077) \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.3em}
+\footnotesize\textit{Note:} ``Local'' denotes the fold-specific localised upper-bound penalty \eqref{eq:foldbound}; ``Local \(-\) Fixed'' reports paired mean ISE differences with paired MCSE.
+\end{table}
+
+Across the seven nonzero-degree candidates per sample in Table~\ref{tab:t4}, the median fixed-to-fold penalty ratio is \(1.800\) (quartiles \(1.478\) and \(2.498\)) for bimodal \(n=100\) and \(1.009\) (quartiles \(1.006\) and \(1.012\)) for narrow \(n=500\), with \(t\approx 14.979\) and \(18.198\) for \(n=100,500\) (\(K=5,J=8\)). Replacing worst-case union-bound constants with empirical-variance calibration is a natural avenue for tightening finite-sample penalties.
+
+\subsection{Fixed-degree computation-time diagnostics}
+Three independent seeds generate narrow-distribution samples (\(\kappa=20\)), each of size \(n=500\); methods are compared on the same samples and fixed \(r\). The certified method uses \(\eta=0.1\) and doubles from \(D=2r\). The SDP uses cold-start SCS with tolerance \(5\times10^{-8}\) and at most 30,000 iterations. In a single-threaded Windows environment, versions are Python 3.12.10, SciPy 1.18.1, CVXPY 1.9.3 and SCS 3.3.1; each cell is the median of three runs. All 12 certified solves met the stopping threshold and all 12 SDP statuses were optimal. The objective difference is the certified objective minus the repaired numerical SDP objective, not a strict error bound relative to the exact optimum.
+
+\begin{table}[htbp]
+\centering
+\caption{Computation time and objective differences at fixed degree}\label{tab:t5}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{rrrrrrrr}
+\toprule
+\(r\) & \(D\) & Certified total & SLSQP & SDP total & SCS & Objective gap & \(E_D\) \\
+\midrule
+4 & 512 & 0.0153 & 0.0134 & 0.0229 & 0.0067 & 0.002712 & 0.000072 \\
+8 & 512 & 0.0259 & 0.0243 & 0.0469 & 0.0270 & 0.002305 & 0.000278 \\
+12 & 96 & 0.0081 & 0.0067 & 0.0875 & 0.0646 & 0.000775 & 0.000503 \\
+24 & 96 & 0.0067 & 0.0059 & 0.3376 & 0.3056 & 0.001787 & 0.001217 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of related circular density estimation and nonnegative trigonometric approximation approaches}\label{tab:compare}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}Xccccc}
+\toprule
+Approach & Nonneg. & Zeros & No SDP & Risk theory & \(O(r/n)\) cert. \\
+\midrule
+Trig.\ density bases \citep{binette2022} & Yes & Via mixtures & Yes & Bayesian & No \\
+Fejér-poly.\ estimation \citep{klar2025} & Yes & Yes & Yes & Frequentist & No \\
+SDP trig.\ approx.\ (related; \citealp{siem2008}) & Yes & Yes & No & Not studied & No \\
+Grid bounds (adapted; \citealp{pfister2019}) & Yes & Yes & Yes & Not studied & No \\
+\textbf{Certified projection (this paper)} & \textbf{Yes*} & \textbf{Yes} & \textbf{Yes} & \textbf{Frequentist} & \textbf{Yes*} \\
+\bottomrule
+\end{tabularx}
+
+\vspace{0.3em}
+\footnotesize\textit{Note:} *Holds rigorously in exact arithmetic (Propositions~\ref{prop:classes} and~\ref{prop:certificate}); numerical implementation verifies feasibility and residuals in floating-point arithmetic. ``Zeros'' indicates whether the framework accommodates densities vanishing on the circle.
+\end{table}
+
+The remainder of the paper is organised as follows. Section~\ref{sec:model} introduces the certified projection model and stopping rule. Section~\ref{sec:risk} establishes fixed-degree, Sobolev, and cross-validation risk bounds. Section~\ref{sec:sim} presents simulation comparisons against full SDP, grid-repair, and direct Fejér kernel baselines. Section~\ref{sec:app} illustrates a computational extension to grouped hourly bike-sharing data, and Section~\ref{sec:discussion} concludes. The notation is summarised in Appendix~\ref{app:notation}.
+
+\section{Model and computable projection certificates}\label{sec:model}
+\subsection{Nonnegative densities and inner and outer approximations}
+Let \(X_1,\dots,X_n\) be independent and identically distributed continuous observations on the circle \([0,2\pi)\), such as directional measurements or periodic event times. To avoid both the negative values of truncated Fourier series and the first-order bias floor of direct Fejér kernel smoothing, we project the empirical Fourier coefficients onto the compact convex set of nonnegative trigonometric densities of degree \(r\) (the normalised slice of the nonnegative trigonometric polynomial cone with constant Fourier coefficient fixed at one). For an integer \(r\ge1\) and complex coefficients \(a_\ell\), define
+\begin{equation}
+f_z(\theta)=\frac1{2\pi}\left\{1+2\operatorname{Re}\sum_{\ell=1}^r a_\ell e^{i\ell\theta}\right\},\quad
+z=(\operatorname{Re}a_1,\ldots,\operatorname{Re}a_r,\operatorname{Im}a_1,\ldots,\operatorname{Im}a_r)^\top .
+\label{eq:density}
+\end{equation}
+Write \(q_z(\theta)=2\pi f_z(\theta)\) and let \(\mathcal K_r=\{z\in\mathbb R^{2r}: f_z(\theta)\ge0,\ 0\le\theta<2\pi\}\). Equation~\eqref{eq:density} integrates to one, so each element of \(\mathcal K_r\) defines a density. Its coefficients satisfy \(|a_\ell|\le1\), and \(\mathcal K_r\) is therefore compact and convex. Let \(\hat a_\ell=n^{-1}\sum_j e^{-i\ell X_j}\) be the empirical Fourier coefficients, and arrange their real and imaginary parts in the order in \eqref{eq:density} to form \(c\). The target projection is
+\begin{equation}
+z^*=\arg\min_{z\in\mathcal K_r}J(z),\qquad J(z)=\tfrac12\|z-c\|_2^2.
+\label{eq:projection}
+\end{equation}
+Take a representation degree \(D\ge r\), \(L=2D+1\) nodes \(\phi_k=2\pi k/L\), and \(t_\ell=1-\ell/(D+1)\). Write
+\begin{equation}
+(A_Iz)_k=2\operatorname{Re}\sum_{\ell=1}^r\frac{a_\ell}{t_\ell}e^{i\ell\phi_k},\qquad
+(A_Oz)_k=2\operatorname{Re}\sum_{\ell=1}^ra_\ell e^{i\ell\phi_k}.
+\label{eq:matrices}
+\end{equation}
+Define the inner class \(C_{r,D}=\{z:\mathbf1+A_Iz\ge0\}\) and the outer class \(O_{r,D}=\{z:\mathbf1+A_Oz\ge0\}\), with inequalities interpreted componentwise.
+
+\begin{proposition}\label{prop:classes}
+For every \(D\ge r\), \(C_{r,D}\subseteq\mathcal K_r\subseteq O_{r,D}\). The inner constraints are sufficient, but generally not necessary, for global nonnegativity.
+\end{proposition}
+\begin{proof}
+For \(z\in C_{r,D}\), set \(p_k=[1+(A_Iz)_k]/L\ge0\). Write \(d_0=1\), \(d_m=a_m/t_m\) and \(d_{-m}=\overline{a_m}/t_m\) for \(1\le m\le r\). For \(0\le\ell\le D\), orthogonality of roots of unity gives
+\[
+\sum_{k=0}^{L-1}p_ke^{-i\ell\phi_k}
+=\sum_{m=-r}^{r}d_m\left(\frac1L\sum_{k=0}^{L-1}e^{i(m-\ell)\phi_k}\right).
+\]
+Since \(|m-\ell|\le r+D\le2D<L\), the parenthesised term equals one only when \(m=\ell\), and zero otherwise. Thus \(\sum_kp_k=1\); for \(1\le\ell\le r\) the sum is \(a_\ell/t_\ell\), and for \(r<\ell\le D\) it is zero. The normalised Fejér kernel is
+\begin{equation}
+K_D(\theta)=\frac{1}{2\pi(D+1)}\left|\sum_{j=0}^De^{ij\theta}\right|^2,
+\label{eq:fejer}
+\end{equation}
+whose \(\ell\)th Fourier multiplier is \(t_\ell\). Hence \(f_z=\sum_k p_kK_D(\theta-\phi_k)\ge0\). Conversely, a function that is nonnegative everywhere is nonnegative at the nodes, so \(\mathcal K_r\subseteq O_{r,D}\).
+\end{proof}
+
+Geometrically, the inner-class construction rests on the triangular weights of a geometric square: for \(Q_\beta(1,z)=\sum_{j=0}^{D}(\beta z)^j\) with \(z=e^{i\theta}\) and \(\beta=e^{-i\phi}\), \(|Q_\beta(1,z)|^2/[2\pi(D+1)]\) is the shifted Fejér kernel in \eqref{eq:fejer}, whose multiplicities produce the multipliers \(t_\ell\). The output \(z_I\) is obtained as a numerical solution of \(\min_{z\in C_{r,D}}J(z)\); sampling the inverse-multiplier polynomial ensures global nonnegativity between nodes, whereas checking the original density only at the nodes does not.
+
+Existing grid certificates and our inner class are non-nested. For example, let \(r=1,D=8,L=17\) and \(q(\theta)=1-0.92\cos\theta\). The inverse-Fejér node value at \(\theta=0\) is \(1-0.92/(8/9)<0\), so the polynomial lies outside \(C_{r,D}\), whereas the grid bound of \citet{pfister2019} with \(C=(1-2/17)^{-1/2}\), node minimum \(B=0.08\), and maximum \(A\le1.92\) satisfies \((C+1)B-(C-1)A>0\). However, pairing our linear inner class with outer constraints and a dual lower bound yields an adaptive \(O(r/n)\) stopping certificate that avoids the sensitivity of fixed-grid bounds to the candidate \(D/r\) range (see Section~\ref{sec:sim}).
+
+\subsection{Error bounds and stopping rule}
+For any \(\lambda\ge0\), the dual function of the outer-constrained problem and its associated ball centre are
+\begin{equation}
+g(\lambda)=-\tfrac12\|A_O^\top\lambda\|^2-\lambda^\top(\mathbf1+A_Oc),\qquad v=c+A_O^\top\lambda.
+\label{eq:dual}
+\end{equation}
+Weak duality gives \(g(\lambda)\le\min_{O_{r,D}}J\le J(z^*)\). For any \(z_o\in O_{r,D}\), with coefficients \(b_\ell\), define
+\begin{equation}
+\begin{aligned}
+m_g &= \min_k\{1+(A_Oz_o)_k\}, & \beta &= \frac{\pi^2}{L^2}\sum_{\ell=1}^r \ell^2|b_\ell|,\\
+\delta &= \max(0,\beta-m_g), & z_R &= \frac{z_o}{1+\delta}.
+\end{aligned}
+\label{eq:repair}
+\end{equation}
+Outer feasibility gives \(m_g\ge0\) and \(0\le\delta\le\beta\). The node values are nonnegative and have discrete average one. Discrete orthogonality then gives \(|b_\ell|\le1\), whence
+\[
+\beta\le\frac{\pi^2 r(r+1)(2r+1)}{6(2D+1)^2}.
+\]
+For fixed \(r\), this bound decreases as \(O(D^{-2})\). If the outer point is near the boundary or the grid is coarse, the correction can make the ball bound loose. The direct gap bound does not use the corrected point; taking the minimum cannot be worse than using the direct bound alone.
+
+At a global minimiser \(\theta^*\), \(q'_{z_o}(\theta^*)=0\), and the nearest node is at distance at most \(\pi/L\). Since \(\|q_{z_o}''\|_\infty\le2\sum_{\ell=1}^r\ell^2|b_\ell|\), Taylor's theorem applied between the minimiser and its nearest node gives \(q_{z_o}(\theta^*)\ge m_g-\beta\), and hence \(z_R\in\mathcal K_r\). Let \(U_I=J(z_I)\) and \(U_R=J(z_R)\).
+
+\begin{proposition}\label{prop:certificate}
+If \(z_I\in C_{r,D}\), \(z_o\in O_{r,D}\), and \(\lambda\ge0\), then
+\begin{equation}
+\|f_{z_I}-f_{z^*}\|_{L^2}^2\le E_D
+=\frac1\pi\min\left\{2(U_I-g),\ \left[\|z_I-v\|+\sqrt{2(U_R-g)}\right]^2\right\}.
+\label{eq:certificate}
+\end{equation}
+\end{proposition}
+\begin{proof}
+The projection variational inequality gives \(J(z_I)-J(z^*)\ge\|z_I-z^*\|^2/2\); the first bound follows from \(g\le J(z^*)\). For any \(z\in\mathcal K_r\), completing the square yields \(J(z)\ge g+\|z-v\|^2/2\). Since \(J(z^*)\le U_R\), the point \(z^*\) lies in the ball centred at \(v\) with radius \(\sqrt{2(U_R-g)}\); the triangle inequality yields the second bound. Parseval's identity gives \(\|f_z-f_w\|_{L^2}^2=\|z-w\|^2/\pi\).
+\end{proof}
+
+The result applies to any feasible inner and outer points and any nonnegative multiplier; exact optimisation is unnecessary. For \(\eta>0\), the algorithm starts at \(D=2r\) and doubles \(D\) until \(E_D\le\eta r/(\pi n)\) (returning the uniform density for \(r=0\)). Because both classes approximate \(\mathcal K_r\) for fixed \(r\), the procedure terminates in finite steps under exact optimisation (even though the inner classes need not be nested across doublings).
+
+To keep the theoretical and numerical layers distinct, note that Proposition~\ref{prop:certificate} provides a rigorous \emph{theoretical certificate} in exact arithmetic. In our numerical implementation, we compute a floating-point evaluation of this certificate by solving the inner and outer quadratic programmes via SLSQP (capped at \(D\le256r\)) and recovering a nonnegative dual multiplier via nonnegative least squares on active constraints; node slack, stationarity residuals, and the stopping threshold are checked at each step, with small numerical violations repaired by shrinkage towards the uniform density (Appendix~\ref{app:numerical}). Rigorous machine-verifiable certification via interval arithmetic or outward rounding is left for future work.
+
+\section{Statistical risk and representation degree}\label{sec:risk}
+\subsection{Fixed-degree risk based on the a posteriori certificate}
+Let \(f\in L^2\) be the true circular density and let \(\mathcal F_r=\{f_z:z\in\mathcal K_r\}\). Expectations below are over independent and identically distributed observations, and \(r\) is fixed before observing the data.
+\begin{proposition}\label{prop:fixedrisk}
+Suppose \(\eta\ge0\) and the computation satisfies \(E_D\le\eta r/(\pi n)\) for every sample. Then, for every \(\epsilon>0\),
+\begin{equation}\label{eq:fixedrisk}
+\mathbb E\|f_{z_I}-f\|_2^2\le(1+\epsilon)\operatorname{dist}(f,\mathcal F_r)^2+
+\left[(1+\epsilon)+(1+\epsilon^{-1})\eta\right]\frac{r}{\pi n}.
+\end{equation}
+\end{proposition}
+\begin{proof}
+Let \(b\) be the vector of the first \(r\) true Fourier coefficients and \(e=c-b\) the empirical error. For any \(w\in\mathcal K_r\), set \(d=z^*-w\). The projection inequality and \(2e^\top d-\|d\|^2\le\|e\|^2\) give
+\[\|z^*-b\|^2\le\|w-b\|^2+\|e\|^2.\]
+Combining this with the Fourier tail and \(\mathbb E\|e\|^2=\sum_{\ell=1}^r(1-|a_\ell(f)|^2)/n\le r/n\), the risk of the full projection is at most \(\operatorname{dist}(f,\mathcal F_r)^2+r/(\pi n)\). The inequality \(\|u+v\|^2\le(1+\epsilon)\|u\|^2+(1+\epsilon^{-1})\|v\|^2\), together with the samplewise certificate, gives \eqref{eq:fixedrisk}.
+\end{proof}
+Equation~\eqref{eq:fixedrisk} permits \(D\) to be refined adaptively using the same data, because the certificate holds samplewise.
+
+\subsection{Densities with zeros and a fixed representation degree}
+Let \(a_\ell(f)=\int_0^{2\pi}e^{-i\ell\theta}f(\theta)d\theta\), and suppose that, for \(0<s\le2\),
+\begin{equation}\label{eq:sobolev}
+\sum_{\ell\ge1}\ell^{2s}|a_\ell(f)|^2\le R^2.
+\end{equation}
+A positive Jackson-type convolution constructed from the squared Fejér kernel yields \(g_r\in\mathcal F_r\) with \(\|f-g_r\|_2^2\le C_sR^2r^{-2s}\), for \(r\ge2\). This construction uses only \(f\ge0\) and requires no strictly positive lower bound. To distinguish data-dependent stopping from a prespecified representation degree, consider exact projection onto \(C_{r,D}\) with \(D\) fixed before sampling.
+\begin{proposition}\label{prop:sobolev}
+If \(r\ge2\), \(\eta>0\), and
+\begin{equation}\label{eq:degree}
+D\ge\max\left\{2r,\ r-1+\left\lceil r(r+1)\sqrt{2n/\eta}\right\rceil\right\},
+\end{equation}
+then the corresponding inner-class projection estimator satisfies
+\begin{equation}\label{eq:sobolevrisk}
+\mathbb E\|f_{z_I}-f\|_2^2\le2C_sR^2r^{-2s}+\frac{(1+\eta)r}{\pi n}.
+\end{equation}
+\end{proposition}
+\begin{proof}
+Let \(u=(2\pi)^{-1}\) and \(\alpha=r(r+1)/(D+1-r)\). For \(g\in\mathcal F_r\), write \(z_g\) for its coefficient vector. Since \(q_{z_g}(\phi_k)\ge0\) and \(|a_\ell(g)|\le1\), at each node
+\[
+\begin{aligned}
+1+(A_Iz_g)_k &\ge -2\sum_{\ell=1}^r\left(\frac1{t_\ell}-1\right)|a_\ell(g)|\\
+&=-2\sum_{\ell=1}^r\frac{\ell|a_\ell(g)|}{D+1-\ell}
+\ge-\frac{2}{D+1-r}\sum_{\ell=1}^r\ell|a_\ell(g)|\ge-\alpha.
+\end{aligned}
+\]
+Hence \((g+\alpha u)/(1+\alpha)\) belongs to the inner class. Denote this shrunken density by \(h\). Parseval's identity and \(|a_\ell(g)|\le1\) give
+\[
+\|h-g\|_2^2=\left(\frac{\alpha}{1+\alpha}\right)^2
+\frac1\pi\sum_{\ell=1}^{r}|a_\ell(g)|^2\le\frac{r\alpha^2}{\pi}.
+\]
+Using \((a+b)^2\le2a^2+2b^2\) with the \(g_r\) above gives
+\[\operatorname{dist}(f,C_{r,D})^2\le2C_sR^2r^{-2s}+2r\alpha^2/\pi.\]
+Equation~\eqref{eq:degree} implies \(\alpha^2\le\eta/(2n)\), so the second term is at most \(\eta r/(\pi n)\). Projection risk on a fixed closed convex inner class is at most this approximation error plus \(r/(\pi n)\), yielding \eqref{eq:sobolevrisk}. Here \(\operatorname{dist}(f,C_{r,D})\) denotes the \(L^2\) distance to the corresponding density class.
+\end{proof}
+When \(s\) is known and \(r\asymp n^{1/(2s+1)}\), \eqref{eq:sobolevrisk} attains the standard Sobolev minimax rate \(n^{-2s/(2s+1)}\), and the sufficient condition \eqref{eq:degree} depends only on \(r,n,\eta\) without estimating unknown \(s,R\). Note that Proposition~\ref{prop:sobolev} applies to exact projection onto \(C_{r,D}\) at a prespecified \(D\), whereas Proposition~\ref{prop:fixedrisk} governs the data-adaptive doubling rule at fixed \(r\). When \(r=1\) and \(f=(1-\cos\theta)/(2\pi)\), the inner constraint at \(\phi_0=0\) and a point attaining equality yield squared approximation error \(1/[4\pi(D+1)^2]\), which is at most \(\eta/(\pi n)\) if and only if \(D+1\ge\sqrt{n/(4\eta)}\), giving the exact representation scale for this vanishing density.
+
+For the \emph{a posteriori} certificate in Proposition~\ref{prop:certificate}, a uniform \emph{a priori} sufficient condition is \(D\ge2r\) and
+\begin{equation}\label{eq:uniformdegree}
+D+1-r\ge\frac{8nr(r+1)}\eta,\quad
+2D+1\ge\pi\sqrt{\frac{8n}{\eta}\frac{r(r+1)(2r+1)}6}.
+\end{equation}
+Under exact inner, outer, and dual solves, \eqref{eq:uniformdegree} guarantees that the direct gap bound is at most \(\eta r/(\pi n)\) (see Appendix~\ref{app:direct}). Because both the Sobolev fixed-inner-class sufficient degree \eqref{eq:degree} (scaling as \(O(\sqrt{n})\)) and the uniform direct-gap sufficient degree \eqref{eq:uniformdegree} (scaling as \(O(n)\)) are highly conservative, the sample-specific \emph{a posteriori} certificate in Proposition~\ref{prop:certificate} is essential in practice: in Section~\ref{sec:sim}, actual stopping degrees are typically over 70 times smaller than the Sobolev sufficient degree \eqref{eq:degree} (and smaller still relative to the \(O(n)\) direct-gap bound \eqref{eq:uniformdegree}).
+
+\subsection{Risk bound for penalised fold selection and model averaging}
+Data-dependent penalties and oracle analysis of cross-validation have been studied by \citet{lerasle2012} and \citet{arlot2016}. We give a sufficient bound for the present nonnegative candidate family that permits the penalty to adapt to training-fold density bounds. Partition the iid data in advance into \(K\ge2\) folds of equal size \(m=n/K\). Candidate degrees \(r_1,\ldots,r_J\) are prespecified. Let \(g_{k,j}\) be the nonnegative normalised density of degree at most \(r_j\) trained on all but fold \(k\). Set \(A_j=(r_j+1)/(2\pi)\), \(A_{\max}=\max_j A_j\), and \(t=\log(KJ^2n^2)\). If \(U_{k,j}\) depends only on the training data for fold \(k\) and satisfies \(\|g_{k,j}\|_\infty\le U_{k,j}\le A_j\), let \(\overline U_j=K^{-1}\sum_kU_{k,j}\). For validation loss \(\gamma_k(g)=\int g^2-2m^{-1}\sum_{i\in I_k}g(X_i)\), choose
+\begin{equation}\label{eq:selection}
+\hat j=\arg\min_j\left\{\frac1K\sum_{k=1}^K\gamma_k(g_{k,j})+\frac{2\overline U_jt}{3m}\right\},\qquad
+\overline g_{\hat j}=\frac1K\sum_{k=1}^K g_{k,\hat j}.
+\end{equation}
+\begin{proposition}\label{prop:oracle}
+If \(\|f\|_\infty\le B\), then for every \(0<\epsilon<1\),
+\begin{equation}\label{eq:oracle}
+\begin{aligned}
+\mathbb E\|\overline g_{\hat j}-f\|_2^2\le\min_j\bigg\{&
+\frac{1+\epsilon}{1-\epsilon}\frac1K\sum_{k=1}^K\mathbb E\|g_{k,j}-f\|_2^2\\
+&+\frac{4Bt}{\epsilon m(1-\epsilon)}+\frac{4t\,\mathbb E\overline U_j}{3m(1-\epsilon)}\bigg\}
++\frac{2(A_{\max}+B)}{n^2}.
+\end{aligned}
+\end{equation}
+\end{proposition}
+A computable training-fold bound uses the maximum on equally spaced nodes and a second-order remainder. Let \(q_{k,j}=2\pi g_{k,j}\); under our convention its \(\ell\)th Fourier coefficient is \(a_{k,j,\ell}=\int g_{k,j}(\theta)e^{-i\ell\theta}d\theta=(2\pi)^{-1}\int q_{k,j}(\theta)e^{-i\ell\theta}d\theta\). For a prespecified number of nodes \(M\), set
+\begin{equation}\label{eq:foldbound}
+U_{k,j}=\min\left\{A_j,\ \frac1{2\pi}\left[
+\max_{0\le h<M}q_{k,j}(2\pi h/M)+\frac{\pi^2}{M^2}\sum_{\ell=1}^{r_j}\ell^2|a_{k,j,\ell}|\right]\right\}.
+\end{equation}
+At a continuous maximum the first derivative vanishes and the nearest node is at distance at most \(\pi/M\); hence \eqref{eq:foldbound} is an upper bound in exact arithmetic. The coefficient \(2/3\) in \eqref{eq:selection} comes from the linear remainder in Bernstein's inequality in Appendix~\ref{app:oracle} and cancellation in the selection inequality. Taking \(U_{k,j}=A_j\) recovers the fixed-upper-bound method; \eqref{eq:foldbound} is at most \(A_j\), so the corresponding theoretical upper bound in \eqref{eq:oracle} does not increase. Equation~\eqref{eq:foldbound} holds for any prespecified positive integer \(M\); increasing \(M\) can reduce the second-order remainder for given coefficients at the cost of more node evaluations. The simulations use \(M=257\). The proof is in Appendix~\ref{app:oracle}.
+
+Fix \(K\ge2\), \(\eta>0\), \(0<\epsilon<1\), and let \(n_{\mathrm{tr}}=n-m\). Suppose that every fold candidate meets the samplewise certificate required for \eqref{eq:fixedrisk} at threshold \(\eta r_j/(\pi n_{\mathrm{tr}})\), and that \(f\) satisfies \eqref{eq:sobolev} with \(s\in(1/2,2]\). Equation~\eqref{eq:sobolev} and Cauchy--Schwarz imply \(\|f\|_\infty<\infty\). Taking a doubling candidate grid covering up to \(\lfloor\sqrt n\rfloor\) gives \(J=O(\log n)\) and \(t=O(\log n)\) for fixed \(K\). Combining \eqref{eq:fixedrisk}, Appendix~\ref{app:kernel}, and \(\overline U_j\le A_j=O(r_j+1)\) with \(r_j\asymp(n/\log n)^{1/(2s+1)}\) yields the adaptive risk rate \(O((\log n/n)^{2s/(2s+1)})\) while allowing zeros of \(f\).
+
+Because \(A_j\) bounds the worst-case supremum over all nonnegative densities of degree \(r_j\), the fixed-bound penalty is conservative in finite samples. Equation~\eqref{eq:foldbound} tightens this penalty using the fitted training-fold density while preserving the non-asymptotic oracle guarantee in Proposition~\ref{prop:oracle}. We emphasise that Proposition~\ref{prop:oracle} applies specifically to the fold-averaged estimator \(\overline g_{\hat j}\) (evaluated in Table~\ref{tab:t4}), whereas the main simulations in Tables~\ref{tab:t1} and~\ref{tab:t3} evaluate standard unpenalised five-fold selection followed by full-sample refitting, which is a distinct estimation procedure.
+
+\section{Simulation studies}\label{sec:sim}
+\subsection{Design}
+We use six density scenarios: the uniform distribution; the cardioid with a zero, \((1+\cos(\theta-0.7))/(2\pi)\); and four von Mises or mixture densities. Writing \((w,\mu,\kappa)\) for component weight, location and concentration, the smooth scenario is \((1,0.7,2)\), bimodal is \((0.6,0.5,4)+(0.4,3.4,7)\), narrow is \((1,0.73,20)\), and boundary-crossing is \((0.7,0.03,10)+(0.3,3.2,3)\). Sample sizes are \(n=100,500\), with 40 replications per cell and 480 samples in total. For each sample, the three methods share random five-fold splits, select their parameters independently by validation loss, and refit on the full sample.
+
+The direct Fejér kernel density estimator is \(\widehat f_d=n^{-1}\sum_{i=1}^{n}K_d(\theta-X_i)\), with \(\ell\)th coefficient \((1-\ell/(d+1))\hat a_\ell\) for \(1\le\ell\le d\). It constructs a density directly by averaging a nonnegative kernel, shrinking low-order empirical coefficients by positive multipliers. Our method instead projects empirical coefficients under nonnegativity constraints and uses inverse multipliers to construct a feasible inner class and an \emph{a posteriori} bound relative to the full projection, avoiding the first-order bias floor of direct kernel smoothing.
+
+The methods compared are: (1) the certified method, with \(\eta=0.1\) and \(D\) adjusted by \eqref{eq:certificate}; (2) grid repair, which projects on the outer grid, repairs by \eqref{eq:repair}, and independently selects \(D/r\in\{2,4,8,16\}\); and (3) the full nonnegative trigonometric-polynomial SDP projection. All three use candidate statistical degrees \(\{0,1,2,3,4,6,8,12\}\). The validation loss for each candidate is \(\int_{-\pi}^{\pi}\hat f(\theta)^2\,d\theta-2n_v^{-1}\sum_{j\in V}\hat f(X_j)\), weighted by validation-fold sample size. The true density is used only for final integrated squared error (ISE), not tuning. Simulation ISE is evaluated via Parseval's identity with true Fourier coefficients truncated at degree 256 (whose omitted Bessel-series tail is below \(10^{-500}\), well below machine precision and identical across methods). For \(r=0,1\), the SDP uses analytical solutions; otherwise it uses SCS or a feasibility shortcut, with numerical negative eigenvalues truncated and trace normalised.
+
+\subsection{Results}
+Table~\ref{tab:t1} reports the mean ISE (MISE) over 40 replications across all six scenarios (complete Monte Carlo standard errors are provided in the supplementary repository).
+
+\begin{table}[htbp]
+\centering
+\caption{Mean integrated squared error (MISE) by scenario over 40 replications, with Monte Carlo standard errors (MCSE) in parentheses}\label{tab:t1}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lrrrrr}
+\toprule
+Scenario & \(n\) & Certified (MCSE) & Grid repair & SDP & Cert \(-\) SDP (MCSE) \\
+\midrule
+Smooth & 100 & 0.010473 (0.001419) & 0.011988 & 0.010646 & \(-0.000173\) (0.000412) \\
+Smooth & 500 & 0.002893 (0.000410) & 0.003104 & 0.003084 & \(-0.000191\) (0.000094) \\
+Bimodal & 100 & 0.016432 (0.001874) & 0.016728 & 0.015587 & \(+0.000845\) (0.000782) \\
+Bimodal & 500 & 0.004930 (0.000408) & 0.004734 & 0.004726 & \(+0.000204\) (0.000149) \\
+Narrow & 100 & 0.033245 (0.003007) & 0.034185 & 0.034418 & \(-0.001173\) (0.001074) \\
+Narrow & 500 & 0.003908 (0.000557) & 0.003934 & 0.003849 & \(+0.000059\) (0.000048) \\
+Boundary-crossing & 100 & 0.023749 (0.002843) & 0.023262 & 0.023740 & \(+0.000009\) (0.000610) \\
+Boundary-crossing & 500 & 0.004732 (0.000425) & 0.004922 & 0.004775 & \(-0.000043\) (0.000065) \\
+Uniform & 100 & 0.005174 (0.001229) & 0.005927 & 0.005220 & \(-0.000046\) (0.000046) \\
+Uniform & 500 & 0.000330 (0.000112) & 0.000330 & 0.000330 & \(0.000000\) (0.000000) \\
+Cardioid with zero & 100 & 0.008861 (0.002495) & 0.007693 & 0.008326 & \(+0.000536\) (0.000846) \\
+Cardioid with zero & 500 & 0.001713 (0.000410) & 0.001611 & 0.001623 & \(+0.000090\) (0.000042) \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[htbp]
+\centering
+\caption{Representation degree and smaller bound at stopping}\label{tab:t2}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lrrrrrr}
+\toprule
+Scenario & \(n\) & Fits & \(D/r\) median (Q1, Q3) & Direct & Ball & Tie \\
+\midrule
+Smooth & 100 & 40 & 8(4,10) & 67.5\% & 32.5\% & 0.0\% \\
+Smooth & 500 & 40 & 4(2,8) & 97.5\% & 2.5\% & 0.0\% \\
+Bimodal & 100 & 40 & 8(8,16) & 40.0\% & 60.0\% & 0.0\% \\
+Bimodal & 500 & 40 & 6(4,16) & 62.5\% & 37.5\% & 0.0\% \\
+Narrow & 100 & 40 & 12(8,32) & 62.5\% & 37.5\% & 0.0\% \\
+Narrow & 500 & 40 & 8(8,8) & 95.0\% & 5.0\% & 0.0\% \\
+Boundary & 100 & 40 & 8(4,8) & 75.0\% & 25.0\% & 0.0\% \\
+Boundary & 500 & 40 & 8(4,16) & 75.0\% & 25.0\% & 0.0\% \\
+Uniform & 100 & 16 & 2(2,2) & 6.2\% & 0.0\% & 93.8\% \\
+Uniform & 500 & 10 & 2(2,2) & 0.0\% & 0.0\% & 100.0\% \\
+Cardioid & 100 & 40 & 16(7,32) & 55.0\% & 45.0\% & 0.0\% \\
+Cardioid & 500 & 40 & 32(8,64) & 55.0\% & 42.5\% & 2.5\% \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.3em}
+\footnotesize\textit{Note:} Proportions are over nonzero-degree fits (excluding 54 zero-degree fits with no \(D/r\)); Q1 and Q3 use linear interpolation, and bounds are counted as tied when their difference is at most \(10^{-12}\) times the larger bound.
+\end{table}
+
+Table~\ref{tab:t2} reports an \emph{a posteriori} replay of the 480 final fits from Table~\ref{tab:t1} (\(\eta=0.1\)). Among the 426 nonzero-degree fits, the direct bound is smaller 275 times, the ball bound 125 times, and 26 are ties; notably, in 46 cases the ball bound reaches the stopping threshold while the direct bound does not, highlighting their complementary role in stopping.
+
+Across all six scenarios in Table~\ref{tab:t1}, the certified estimator closely matches full SDP projection: for instance, the paired certified-minus-SDP mean ISE difference is \(-0.0001731\) (paired MCSE \(0.0004122\)) for smooth \(n=100\) and \(0.0008455\) (paired MCSE \(0.0007821\)) for bimodal \(n=100\). In the concentrated narrow scenario (\(\kappa=20\)), Fourier truncation requires higher frequencies---the eighth von Mises Fourier coefficient \(I_8(\kappa)/I_0(\kappa)\) is \(0.198\) at \(\kappa=20\) versus \(1.2\times10^{-5}\) at \(\kappa=2\)---so all three methods select the boundary \(r=12\) at \(n=500\). Expanding the candidate degree cap to 24 increases the selection variance of unpenalised cross-validation at moderate sample size (raising mean ISE on the 40 samples from \(0.003908\) to \(0.005959\) for certified and \(0.003849\) to \(0.005964\) for SDP), yet preserves near-identical accuracy between the two methods (paired mean difference \(-5.06\times10^{-6}\), MCSE \(5.28\times10^{-5}\)). On 20 independent narrow samples with expanded caps (\(r\le24\), grid-repair \(D/r\le32\)), certified, grid-repair, and SDP MISEs are \(0.030244, 0.029315, 0.029432\) (\(n=100\)) and \(0.007108, 0.007327, 0.007038\) (\(n=500\)), with grid repair still hitting its \(D/r=32\) cap in 70\%--85\% of cases.
+
+To assess sensitivity to fixed-grid positivity bounds, we also implemented linear constraints from \citet{pfister2019} on the first eight samples per cell. Under the standard \(D/r\le16\) grid at narrow \(n=500\), the fixed-grid baseline incurs a much higher MISE (\(0.021591\) vs.\ \(0.003025\) for our certified method), and even after expanding its cap to \(D/r\le64\) (reducing MISE to \(0.003855\) at \(n=500\) and \(0.034069\) vs.\ \(0.032107\) at \(n=100\)), it remains pinned at its grid boundary in 87.5\%--100\% of cases. By contrast, our adaptive certificate automatically refines \(D\) without manual grid-range tuning.
+
+Table~\ref{tab:t3} benchmarks the certified estimator against direct Fejér kernel smoothing (tuned over degrees \(\{0,1,2,3,4,6,8,12,16,24,32,48,64,96,128\}\)) across 60 replications in the bimodal and narrow scenarios. The certified projection substantially outperforms direct Fejér smoothing: at \(n=500\), the paired Fejér-minus-certified mean ISE difference is \(0.001745\) (MCSE \(0.000300\)) for bimodal (a 27\% error reduction) and \(0.010170\) (MCSE \(0.001057\)) for narrow (over a three-fold error reduction), confirming that constrained projection eliminates the first-order bias floor of direct Fejér kernel smoothing.
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison with direct Fejér kernel smoothing for bimodal and narrow scenarios: mean ISE over 60 replications}\label{tab:t3}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+Scenario & \(n\) & Certified & Grid repair & SDP & Fejér kernel \\
+\midrule
+Bimodal & 100 & 0.015953 & 0.016438 & 0.015787 & 0.019169 \\
+Bimodal & 500 & 0.004703 & 0.004600 & 0.004593 & 0.006448 \\
+Narrow & 100 & 0.032278 & 0.033621 & 0.033811 & 0.057709 \\
+Narrow & 500 & 0.004510 & 0.004592 & 0.004514 & 0.014680 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+We further examined sensitivity to the stopping tolerance \(\eta\in\{0.02,0.1,0.5,2\}\) across the 480 samples. All 1,920 final fits terminated within \(D\le256r\); in narrow \(n=500\), MISEs vary smoothly as \(0.003846, 0.003908, 0.004695\), and \(0.006759\), while median \(D/r\) across 107 nonzero-degree diagnostics decreases from 16 to 8, 2, and 2. In solver-to-solver comparisons against numerical SDP outputs, nine minor exceedances were observed; verification with a second solver showed all remaining discrepancies were between \(2.76\times10^{-11}\) and \(1.37\times10^{-9}\)---far below the \(2\times10^{-7}\) solver tolerance---and exact rational checks on the 12 regenerated outputs confirmed exact certificate validity in all 12 cases (Appendix~\ref{app:numerical}). Across the 352 main-simulation fits with \(r\ge2\), the median ratio of the Sobolev fixed-inner-class sufficient degree \eqref{eq:degree} to the actual stopping degree \(D\) is \(72.79\) (quartiles \(31.30\) and \(162.61\)); because the uniform direct-gap sufficient degree \eqref{eq:uniformdegree} scales as \(O(n)\) rather than \(O(\sqrt{n})\), actual stopping degrees are even smaller relative to \eqref{eq:uniformdegree}.
+
+Finally, as a follow-up sensitivity evaluation, Table~\ref{tab:t4} compares the penalised fold-averaging rule \eqref{eq:selection} (with \(M=257\) in \eqref{eq:foldbound}) against the worst-case fixed-bound penalty and unpenalised fold averaging on 1,200 independent samples (100 per cell; all 48,000 fold fits succeeded). Replacing the uniform bound \(A_j\) with the localised training-fold bound \(U_{k,j}\) substantially reduces over-penalisation relative to the fixed bound---lowering MISE by nearly 70\% in bimodal \(n=100\) (\(0.045853\) vs.\ \(0.147805\)) and in boundary \(n=500\) (\(0.007869\) vs.\ \(0.026401\))---while preserving exact degree-zero recovery in the uniform scenario. Because the union-bound factor \(t\) and Bernstein constants remain conservative in finite samples, unpenalised fold averaging still yields lower MISE in nonuniform regimes; the localised penalty's primary advantage is tightening the finite-sample penalty while retaining the non-asymptotic oracle guarantee of Proposition~\ref{prop:oracle}.
+
+\begin{table}[htbp]
+\centering
+\caption{Fold-averaged mean ISE for penalty schemes (1,200 independent samples)}\label{tab:t4}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrr}
+\toprule
+Scenario & \(n\) & None & Fixed & Local & Local \(-\) Fixed (MCSE) \\
+\midrule
+Smooth & 100 & 0.011100 & 0.046909 & 0.046909 & 0.000000 (0.000000) \\
+Smooth & 500 & 0.002940 & 0.003790 & 0.003828 & 0.000038 (0.000049) \\
+Bimodal & 100 & 0.016551 & 0.147805 & 0.045853 & \(-0.101952\) (0.004149) \\
+Bimodal & 500 & 0.003940 & 0.026879 & 0.004111 & \(-0.022768\) (0.000230) \\
+Narrow & 100 & 0.028928 & 0.147472 & 0.147472 & 0.000000 (0.000000) \\
+Narrow & 500 & 0.005521 & 0.034658 & 0.032966 & \(-0.001692\) (0.000625) \\
+Boundary & 100 & 0.021708 & 0.137462 & 0.118662 & \(-0.018799\) (0.005669) \\
+Boundary & 500 & 0.005002 & 0.026401 & 0.007869 & \(-0.018532\) (0.000880) \\
+Uniform & 100 & 0.003732 & 0.000000 & 0.000000 & 0.000000 (0.000000) \\
+Uniform & 500 & 0.000497 & 0.000000 & 0.000000 & 0.000000 (0.000000) \\
+Cardioid & 100 & 0.006501 & 0.047588 & 0.039140 & \(-0.008447\) (0.002416) \\
+Cardioid & 500 & 0.001499 & 0.000457 & 0.000734 & 0.000278 (0.000077) \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.3em}
+\footnotesize\textit{Note:} ``Local'' denotes the fold-specific localised upper-bound penalty \eqref{eq:foldbound}; ``Local \(-\) Fixed'' reports paired mean ISE differences with paired MCSE.
+\end{table}
+
+Across the seven nonzero-degree candidates per sample in Table~\ref{tab:t4}, the median fixed-to-fold penalty ratio is \(1.800\) (quartiles \(1.478\) and \(2.498\)) for bimodal \(n=100\) and \(1.009\) (quartiles \(1.006\) and \(1.012\)) for narrow \(n=500\), with \(t\approx 14.979\) and \(18.198\) for \(n=100,500\) (\(K=5,J=8\)). Replacing worst-case union-bound constants with empirical-variance calibration is a natural avenue for tightening finite-sample penalties.
+
+\subsection{Fixed-degree computation-time diagnostics}
+Three independent seeds generate narrow-distribution samples (\(\kappa=20\)), each of size \(n=500\); methods are compared on the same samples and fixed \(r\). The certified method uses \(\eta=0.1\) and doubles from \(D=2r\). The SDP uses cold-start SCS with tolerance \(5\times10^{-8}\) and at most 30,000 iterations. In a single-threaded Windows environment, versions are Python 3.12.10, SciPy 1.18.1, CVXPY 1.9.3 and SCS 3.3.1; each cell is the median of three runs. All 12 certified solves met the stopping threshold and all 12 SDP statuses were optimal. The objective difference is the certified objective minus the repaired numerical SDP objective, not a strict error bound relative to the exact optimum.
+
+\begin{table}[htbp]
+\centering
+\caption{Computation time and objective differences at fixed degree}\label{tab:t5}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{rrrrrrrr}
+\toprule
+\(r\) & \(D\) & Certified total & SLSQP & SDP total & SCS & Objective gap & \(E_D\) \\
+\midrule
+4 & 512 & 0.0153 & 0.0134 & 0.0229 & 0.0067 & 0.002712 & 0.000072 \\
+8 & 512 & 0.0259 & 0.0243 & 0.0469 & 0.0270 & 0.002305 & 0.000278 \\
+12 & 96 & 0.0081 & 0.0067 & 0.0875 & 0.0646 & 0.000775 & 0.000503 \\
+24 & 96 & 0.0067 & 0.0059 & 0.3376 & 0.3056 & 0.001787 & 0.001217 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Times are in seconds. Certified total time includes successive solves, dual evaluation, and correction; SDP total time includes CVXPY model construction and compilation, whereas SCS time is the solver-reported solve time. Note that the stopping degree \(D\) is larger at \(r=4,8\) (\(D=512\)) than at \(r=12,24\) (\(D=96\)): for the highly concentrated \(\kappa=20\) density, low-degree truncation pushes the projection tightly against the nonnegativity boundary while simultaneously imposing a stricter stopping threshold \(\eta r/(\pi n)\), whereas higher \(r\) relaxes both boundary pressure and the stopping threshold. Notice also that \(E_D\) is substantially smaller than the objective gap at \(r=4,8\): because \(z^*\) lies on the cone boundary, the first-order term \(\langle z^*-c,\,z_I-z^*\rangle\) dominates \(J(z_I)-J(z^*)\), making the ball bound in \eqref{eq:certificate} far tighter than the direct duality gap. In this fixed-degree single-threaded benchmark, because our certified method stops once the projection discrepancy falls below the statistical sampling scale rather than solving to machine-precision SDP optimality, its runtime advantage grows rapidly with degree: at \(r=12\) total runtime is reduced by more than an order of magnitude (0.0081\,s versus 0.0875\,s), and at \(r=24\) by roughly 50-fold (0.0067\,s versus 0.3376\,s), while delivering virtually identical statistical accuracy (Tables~\ref{tab:t1} and~\ref{tab:t3}). Maximum numerical violation of the certified final inner constraint is zero, whereas the largest absolute negative eigenvalue of an unrepaired SDP matrix is \(7.7\times10^{-8}\) (largest solver residual \(7.3\times10^{-8}\)).
+
+\section{Application to hourly bike-sharing data}\label{sec:app}
+\subsection{Data and prediction}
+We use hourly records from the UCI Bike Sharing dataset \citep{uci2013}. The original data record hourly rental counts rather than individual exact times. Counts are converted to 24 hourly shares for each date, giving complete dates equal weight; working days and non-working days are fitted separately. Using 2012 as the test period, we roll forward by month. Complete dates within the 180 calendar days before a test month are used, with complete dates of the same type in the most recent 35 calendar days used for tuning. We then refit using same-type complete dates in the preceding 180 days and predict the corresponding dates in that month. There are 350 complete test days. Figure~\ref{fig:bike-forecasts} illustrates the January 2012 forecasts. Whereas Sections~\ref{sec:model}--\ref{sec:sim} address continuous i.i.d.\ angular observations, this empirical application demonstrates how our certified nonnegative projection framework extends naturally to grouped circular count data aggregated into discrete hourly bins.
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{bike_sharing_forecasts.pdf}
+\caption{Predicted hourly shares for working and non-working days in January 2012. Solid and dashed lines show the certified and SDP forecasts, respectively; the curves nearly coincide.}
+\label{fig:bike-forecasts}
+\end{figure}
+
+Let \(y\) be the mean training-period share vector and \(B\) the design matrix obtained by integrating the cosine and sine terms in \eqref{eq:density} over each hourly bin. The grouped application minimises \(\tfrac12\|Bz+\mathbf1/24-y\|^2\), using the same inner constraints. Since 24 hourly bins cannot identify continuous densities of arbitrarily high frequency, candidate degrees satisfy \(r\le11\). We reconstruct the dual bound for the weighted quadratic objective in coefficient space. The stopping condition requires an upper bound of at most \(10^{-6}\) on the 24-bin prediction vector discrepancy \(\|B(z_I-z^*)\|_2^2\) from the full nonnegative projection (note that this grouped-data certificate controls the 24-dimensional bin-forecast error rather than continuous \(L^2\) density error, as within-hour variation is unidentifiable from hourly counts). Let \(W=B^\top B\) and \(c=W^{-1}B^\top(y-\mathbf1/24)\). For \(r\ge1\), \(W\) is positive definite under this design. Removing a constant independent of \(z\) gives \(J_B(z)=\tfrac12(z-c)^\top W(z-c)\). For outer constraints \(\mathbf1+A_Oz\ge0\) and \(\lambda\ge0\), the dual lower bound is
+\[g_B(\lambda)=-\tfrac12\lambda^\top A_OW^{-1}A_O^\top\lambda-\lambda^\top(\mathbf1+A_Oc).\]
+Let \(\ell=\max\{0,g_B(\lambda)\}\), with corresponding ball centre \(v=c+W^{-1}A_O^\top\lambda\); if the zero lower bound dominates, take the zero multiplier and \(v=c\). Let \(U_I=J_B(z_I)\), \(U_R=J_B(z_R)\), and \(\|x\|_W^2=x^\top Wx\). The squared hourly prediction deviation is bounded by
+\[\min\!\left\{2(U_I-\ell),\ \bigl(\|z_I-v\|_W+\sqrt{2(U_R-\ell)}\bigr)^2\right\},\]
+which follows directly from the weighted projection inequality and completing the square in the dual. Full SDP, fixed \(D=2r\) and other baselines use the same time windows and independently select parameters. The candidate degrees for the certified method, fixed \(D=2r\) and SDP are \(\{0,1,2,3,4,5,7,9,11\}\). Selection uses the mean daily hourly-share squared error on validation dates, breaking ties by the first candidate in order.
+
+Other comparisons include the historical histogram, the mean training-day hourly share; circular kernel smoothing using discrete cyclic convolution of von Mises weights on 24 hourly nodes with concentrations \(\{0,0.5,1,2,4,8,16,32,64,128\}\); and periodic penalised smoothing, which takes \(p_h=e^{z_h}/\sum_j e^{z_j}\) and minimises \(\log\sum_h e^{z_h}-y^\top z+(\lambda/2)\|\Delta^2z\|^2\), where \(\Delta^2\) is the periodic second difference and \(\lambda\in\{0,0.001,0.01,0.1,1,10\}\). Fejér and de la Vallée Poussin (DVP) mixtures fit training shares using equally spaced shifted kernels, nonnegative weights and hourly-bin integrals, with degree candidates \(\{1,2,3,4,5,7,9,11\}\). These baselines all use hourly shares rather than individual continuous event times.
+
+\subsection{Results}
+\begin{table}[htbp]
+\centering
+\caption{Mean prediction losses over 350 complete days}\label{tab:t6}
+\small
+\begin{tabular}{lrr}
+\toprule
+Method & Hourly-share squared error & Log score \\
+\midrule
+Certified & 0.002809096 & 2.857440 \\
+Full SDP & 0.002808416 & 2.857449 \\
+Fixed \(D=2r\) & 0.002825790 & 2.858634 \\
+Circular kernel & 0.002785434 & 2.857205 \\
+Periodic penalty & 0.002809946 & 2.857094 \\
+Historical histogram & 0.002805117 & 2.856794 \\
+Fejér mixture & 0.002860760 & 2.860223 \\
+DVP mixture & 0.004203054 & 2.873363 \\
+\bottomrule
+\end{tabular}
+\end{table}
