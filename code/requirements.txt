@@ -1,7 +1,0 @@
-numpy>=2.0
-scipy>=1.14
-pandas>=2.2
-matplotlib>=3.9
-threadpoolctl>=3.5
-cvxpy>=1.6
-
